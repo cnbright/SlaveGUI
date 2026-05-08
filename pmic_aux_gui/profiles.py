@@ -62,6 +62,7 @@ class PmicProfile:
     registers: tuple[RegisterDefinition, ...]
     vcom: VcomDefinition
     unlock_before_access: bool = False
+    unlock_slave_addr: int | None = None
     unlock_register: int | None = None
     unlock_data: tuple[int, ...] = ()
     mtp_action: MtpAction | None = None
@@ -92,6 +93,12 @@ class HardwareProxy:
 
     def iic_write(self, addr: int, offset: int, data: bytes) -> None:
         raise NotImplementedError
+
+
+NOVA_IIC_EN_SCHEMES = {
+    "io1": {"name": "IO1", "gpio_config": b"\x44\x05"},
+    "io6": {"name": "IO6", "gpio_config": b"\x49\x05"},
+}
 
 
 def reg(
@@ -216,9 +223,12 @@ def fmt_vcom_offset_from_min(min_getter: Callable[[], float], step: float = 0.01
 
 
 _nvp_high_res = {"enabled": False}
+_b602_high_res = {"enabled": False}
 _rt_high_res = {"enabled": True}
 _nvp_vcom_min = {"value": -0.6}
+_b602_vcom_min = {"value": -0.6}
 _nt_vcom_min = {"value": -0.6}
+_lx_vcom_min = {"value": -1.65}
 
 
 def _get_nvp_high_res() -> bool:
@@ -229,12 +239,24 @@ def _get_rt_high_res() -> bool:
     return _rt_high_res["enabled"]
 
 
+def _get_b602_high_res() -> bool:
+    return _b602_high_res["enabled"]
+
+
 def _get_nvp_vcom_min() -> float:
     return _nvp_vcom_min["value"]
 
 
+def _get_b602_vcom_min() -> float:
+    return _b602_vcom_min["value"]
+
+
 def _get_nt_vcom_min() -> float:
     return _nt_vcom_min["value"]
+
+
+def _get_lx_vcom_min() -> float:
+    return _lx_vcom_min["value"]
 
 
 def _mtp_standard_commit(hw: HardwareProxy, profile: PmicProfile, logger: Callable[[str], None]) -> str:
@@ -250,16 +272,17 @@ def _step_nova_enable_aux(hw: HardwareProxy, logger: Callable[[str], None]) -> N
     logger("NOVA IIC-over-AUX enabled via 0x60/0x02 <- 0x04 0x00")
 
 
-def _step_nova_iic_en(hw: HardwareProxy, logger: Callable[[str], None]) -> None:
+def _step_nova_iic_en(hw: HardwareProxy, logger: Callable[[str], None], scheme_key: str = "io1") -> None:
+    scheme = NOVA_IIC_EN_SCHEMES.get(scheme_key, NOVA_IIC_EN_SCHEMES["io1"])
     hw.write_dpcd(0x00102, b"\xC0")
     hw.write_dpcd(0x004C1, b"\x14")
     hw.iic_write(0x60, 0x02, b"\x01")
     hw.iic_write(0x61, 0x02, b"\x04")
     hw.iic_write(0x61, 0x02, b"\x04\x00")
-    hw.iic_write(0x61, 0x45, b"\x44\x05")
+    hw.iic_write(0x61, 0x45, scheme["gpio_config"])
     hw.iic_write(0x61, 0x38, b"\x9E\x10")
     hw.write_dpcd(0x00102, b"\x00")
-    logger("NOVA IIC_EN startup sequence applied")
+    logger(f"NOVA IIC_EN {scheme['name']} startup sequence applied")
 
 
 PMIC_PROFILES: dict[str, PmicProfile] = {
@@ -357,6 +380,112 @@ PMIC_PROFILES: dict[str, PmicProfile] = {
             reg(0xFF, "Control Register", max_value=0xFF, default_value=0x00, description="00 read DAC, 01 read EEPROM, 80 write all DAC into EEPROM", writable=False),
         ),
         vcom=VcomDefinition(display_formatter=fmt_vcom_offset_from_min(_get_nvp_vcom_min)),
+        mtp_action=MtpAction(name="Standard MTP Commit", callback=_mtp_standard_commit),
+    ),
+    "b602": PmicProfile(
+        key="b602",
+        name="B602 / NT50387",
+        slave_addr=0x47,
+        registers=(
+            reg(
+                0x00,
+                "Channel Setting 0",
+                default_value=0xFF,
+                description="Enable bits for VCOM/LDO/VCORE/VIO/VGL/VGH/AVEE/AVDD",
+                supports_slider=False,
+                bit_options=(
+                    bitopt("en_vcom", "VCOM", 0x80),
+                    bitopt("en_ldo", "LDO", 0x40),
+                    bitopt("en_vcore", "VCORE", 0x20),
+                    bitopt("en_vio", "VIO", 0x10),
+                    bitopt("en_vgl", "VGL", 0x08),
+                    bitopt("en_vgh", "VGH", 0x04),
+                    bitopt("en_avee", "AVEE", 0x02),
+                    bitopt("en_avdd", "AVDD", 0x01),
+                ),
+            ),
+            reg(
+                0x01,
+                "Channel Setting 1",
+                default_value=0x07,
+                description="VGH resolution, PWM and GMA/RESET/CTRL enable",
+                supports_slider=False,
+                bit_options=(
+                    bitopt("vgh_high_resolution", "VGH High Resolution", 0x80),
+                    bitopt("en_vio_pwm", "VIO PWM", 0x40),
+                    bitopt("en_vcore_pwm", "VCORE PWM", 0x20),
+                    bitopt("pre_avdd", "PRE_AVDD", 0x10),
+                    bitopt("en_ctrl", "CTRL", 0x08),
+                    bitopt("en_reset", "RESET", 0x04),
+                    bitopt("en_gma2", "GMA2", 0x02),
+                    bitopt("en_gma1", "GMA1", 0x01),
+                ),
+            ),
+            reg(
+                0x02,
+                "Channel Discharge Setting",
+                default_value=0x00,
+                description="Discharge enable bits for all outputs",
+                supports_slider=False,
+                bit_options=(
+                    bitopt("dis_vcom", "VCOM Discharge", 0x80),
+                    bitopt("dis_ldo", "LDO Discharge", 0x40),
+                    bitopt("dis_vio", "VIO Discharge", 0x20),
+                    bitopt("dis_vcore", "VCORE Discharge", 0x10),
+                    bitopt("dis_vgl", "VGL Discharge", 0x08),
+                    bitopt("dis_vgh", "VGH Discharge", 0x04),
+                    bitopt("dis_avee", "AVEE Discharge", 0x02),
+                    bitopt("dis_avdd", "AVDD Discharge", 0x01),
+                ),
+            ),
+            reg(0x03, "AVDD Voltage", max_value=0x3F, default_value=0x14, description="4.0V to 6.5V, 0.05V/step", display_formatter=fmt_volt_linear(4.0, 0.05)),
+            reg(0x04, "AVEE Voltage", max_value=0x1F, default_value=0x05, description="-4.0V to -6.0V, 0.1V/step", display_formatter=fmt_negative_linear(-4.0, 0.1)),
+            reg(0x05, "VGH Voltage", max_value=0x1F, default_value=0x0B, description="6V-12V or 12.5V-28V depending on high-resolution bit", display_formatter=fmt_nvp_vgh_from_mode_supplier(_get_b602_high_res)),
+            reg(0x06, "VGL Voltage", max_value=0x3F, default_value=0x08, description="-5.4V to -18V, 0.2V/step", display_formatter=fmt_negative_linear(-5.4, 0.2)),
+            reg(0x07, "VCORE Voltage", max_value=0x3F, default_value=0x14, description="0.8V to 2.06V, 0.02V/step", display_formatter=fmt_volt_linear(0.8, 0.02)),
+            reg(0x08, "VIO Voltage", max_value=0x1F, default_value=0x10, description="1.0V to 2.55V, 0.05V/step", display_formatter=fmt_volt_linear(1.0, 0.05)),
+            reg(0x09, "LDO Voltage", max_value=0x0F, default_value=0x08, description="1.7V to 2.8V, 0.1V/step", display_formatter=fmt_volt_linear(1.7, 0.1)),
+            reg(0x0B, "VDET Voltage", max_value=0x07, default_value=0x02, description="2.0V to 2.7V, 0.1V/step", display_formatter=fmt_volt_linear(2.0, 0.1)),
+            reg(0x0C, "GMA1 Voltage", max_value=0x3F, default_value=0x0A, description="AVDD to AVDD-1.26V, 0.02V/step"),
+            reg(0x0D, "GMA2 Voltage", max_value=0x3F, default_value=0x0A, description="AVEE to AVEE+1.26V, 0.02V/step"),
+            reg(0x0E, "AVDD Boost Config", default_value=0x61, description="AVDD current limit, slew rate and switching frequency"),
+            reg(0x0F, "AVDD Delay/Soft-Start", default_value=0x12, description="AVDD delay and soft-start"),
+            reg(0x10, "AVEE Config", default_value=0x92, description="AVEE frequency, delay and soft-start"),
+            reg(0x11, "VGH/VGL SIBO Config", default_value=0x12, description="LXH/LXN slew rate and frequency"),
+            reg(0x12, "VGH Delay/Soft-Start", default_value=0x05, description="VGH delay and soft-start"),
+            reg(0x13, "VGL Delay/Soft-Start", default_value=0x03, description="VGL delay and soft-start"),
+            reg(0x14, "VCORE Buck Config", default_value=0x15, description="LXB1 frequency and slew rate"),
+            reg(0x15, "VCORE Delay/Soft-Start", default_value=0x11, description="VCORE delay and soft-start"),
+            reg(0x16, "VIO Buck Config", default_value=0x15, description="LXB2 frequency and slew rate"),
+            reg(0x17, "VIO Delay/Soft-Start", default_value=0x12, description="VIO delay and soft-start"),
+            reg(0x18, "RESET Delay", max_value=0x0F, default_value=0x03, description="RESET delay 0ms to 75ms, 5ms/step"),
+            reg(0x19, "LDO Delay", max_value=0x0F, default_value=0x02, description="LDO delay 0ms to 45ms, 5ms/step"),
+            reg(
+                0x1A,
+                "VCOM Config",
+                max_value=0x3F,
+                default_value=0x05,
+                description="VCOM delay and power-off selection",
+                bit_options=(
+                    bitopt("vcom_poweroff_vdet", "VCOM Power-Off", 0x20, enabled_label="Follow VDET", disabled_label="Follow UVLO"),
+                ),
+            ),
+            reg(
+                0x1B,
+                "Version Code 1",
+                max_value=0x87,
+                default_value=0x48,
+                description="UD mode select and version code",
+                bit_options=(
+                    bitopt("ud_mode", "UD Mode", 0x80, enabled_label="UHD", disabled_label="FHD"),
+                ),
+            ),
+            reg(0x1C, "VCOM_MIN", max_value=0x1F, default_value=0x16, description="VCOM minimum voltage -3.6V to 0.75V, 0.15V/step", display_formatter=fmt_vcom_min_standard),
+            reg(0x1D, "Version Code 2", max_value=0x1F, default_value=0x0B, description="Version code 2", writable=False, supports_slider=False),
+            reg(0xFE, "WED_VCOM", max_value=0x01, default_value=0x00, description="Write VCOM DAC to EEPROM command", writable=False),
+            reg(0xFF, "Control Register", max_value=0x81, default_value=0x00, description="00 read DAC, 01 read EEPROM, 80 write all DAC into EEPROM", writable=False),
+        ),
+        vcom=VcomDefinition(display_formatter=fmt_vcom_offset_from_min(_get_b602_vcom_min)),
         mtp_action=MtpAction(name="Standard MTP Commit", callback=_mtp_standard_commit),
     ),
     "nt50805": PmicProfile(
@@ -461,7 +590,7 @@ PMIC_PROFILES: dict[str, PmicProfile] = {
     "rt6755": PmicProfile(
         key="rt6755",
         name="RT6755",
-        slave_addr=0x46,
+        slave_addr=0x47,
         registers=(
             reg(0x00, "Unlock Code 1", default_value=0x00, description="Unlock code 1, write 0x65 before access", writable=False),
             reg(0x01, "Unlock Code 2", default_value=0x00, description="Unlock code 2, write 0x9A before access", writable=False),
@@ -521,6 +650,7 @@ PMIC_PROFILES: dict[str, PmicProfile] = {
             reg(0x09, "VCORE Voltage", max_value=0x3F, default_value=0x0F, description="0.8V to 2.0V, 0.02V/step", display_formatter=fmt_volt_linear(0.8, 0.02)),
             reg(0x0A, "VIO Voltage", max_value=0x1F, default_value=0x10, description="1.0V to 2.5V, 0.05V/step", display_formatter=fmt_volt_linear(1.0, 0.05)),
             reg(0x0B, "LDO Voltage/Delay", default_value=0x27, description="LDO delay and LDO[3:0] voltage"),
+            reg(0x0C, "Coarse VCOM Voltage", max_value=0xFF, default_value=0x4E, description="Coarse VCOM output voltage, -2.56V to 1.06V, 0.02V/step"),
             reg(0x0D, "VCOM Delay/RESET Voltage", default_value=0x2A, description="VCOM delay and RESET threshold"),
             reg(0x0E, "GMA1 Voltage", max_value=0x3F, default_value=0x0A, description="PAVDD to PAVDD-1.26V, 0.02V/step"),
             reg(0x0F, "GMA2 Voltage", max_value=0x3F, default_value=0x0A, description="NAVDD to NAVDD+1.26V, 0.02V/step"),
@@ -548,6 +678,7 @@ PMIC_PROFILES: dict[str, PmicProfile] = {
             reg(0xFF, "Control Register", max_value=0xFF, default_value=0x00, description="00 read DAC, 01 read EEPROM, 80 write all DAC into EEPROM", writable=False),
         ),
         vcom=VcomDefinition(
+            name="D-VCOM",
             device_addr=0x4F,
             min_value=0x00,
             max_value=0x7F,
@@ -559,9 +690,148 @@ PMIC_PROFILES: dict[str, PmicProfile] = {
             display_formatter=None,
         ),
         unlock_before_access=True,
+        unlock_slave_addr=0x47,
         unlock_register=0x00,
         unlock_data=(0x65, 0x9A),
         mtp_action=MtpAction(name="Standard MTP Commit", callback=_mtp_standard_commit),
+    ),
+    "lx52042c": PmicProfile(
+        key="lx52042c",
+        name="LX52042C",
+        slave_addr=0x46,
+        registers=(
+            reg(
+                0x00,
+                "CH_SET1",
+                default_value=0x7F,
+                description="Enable bits for VGH/VGL2/VIO/VCORE/VGL1/VCOM/PVDD",
+                supports_slider=False,
+                bit_options=(
+                    bitopt("en_vgh", "VGH", 0x01),
+                    bitopt("en_vgl2", "VGL2", 0x02),
+                    bitopt("en_vio", "VIO", 0x04),
+                    bitopt("en_vcore", "VCORE", 0x08),
+                    bitopt("en_vgl1", "VGL1", 0x10),
+                    bitopt("en_vcom", "VCOM", 0x20),
+                    bitopt("en_pvdd", "PVDD", 0x40),
+                ),
+            ),
+            reg(
+                0x01,
+                "CH_SET2",
+                default_value=0xC7,
+                description="Enable bits for GMA/RESET, U_NVDD_4p7uH and VGH high-resolution mode",
+                supports_slider=False,
+                bit_options=(
+                    bitopt("en_reset1", "RESET1", 0x01),
+                    bitopt("u_nvdd_4p7uh", "U_NVDD_4p7uH", 0x02),
+                    bitopt("en_reset2", "RESET2", 0x04),
+                    bitopt("vgh_high_resolution", "VGH High Resolution", 0x20),
+                    bitopt("en_gma1", "GMA1", 0x40),
+                    bitopt("en_gma2", "GMA2", 0x80),
+                ),
+            ),
+            reg(
+                0x02,
+                "CH_SET3",
+                default_value=0x00,
+                description="Discharge enable bits for all main channels",
+                supports_slider=False,
+                bit_options=(
+                    bitopt("dis_vgh", "VGH Discharge", 0x01),
+                    bitopt("dis_vgl2", "VGL2 Discharge", 0x02),
+                    bitopt("dis_vio", "VIO Discharge", 0x04),
+                    bitopt("dis_vcore", "VCORE Discharge", 0x08),
+                    bitopt("dis_vgl1", "VGL1 Discharge", 0x10),
+                    bitopt("dis_vcom", "VCOM Discharge", 0x20),
+                    bitopt("dis_pvdd", "PVDD Discharge", 0x40),
+                    bitopt("dis_nvdd", "NVDD Discharge", 0x80),
+                ),
+            ),
+            reg(0x03, "PVDD Voltage", max_value=0x3F, default_value=0x14, description="4.0V to 7.0V, 0.05V/step", display_formatter=fmt_volt_linear(4.0, 0.05)),
+            reg(0x04, "NVDD Voltage", max_value=0x3F, default_value=0x14, description="-4.0V to -7.15V, 0.05V/step", display_formatter=fmt_negative_linear(-4.0, 0.05)),
+            reg(0x05, "VGH Voltage", max_value=0x1F, default_value=0x0B, description="6V-12V or 12.5V-28V depending on high-resolution bit"),
+            reg(0x06, "VGL2 Voltage", max_value=0x3F, default_value=0x21, description="-5.4V to -18V, 0.2V/step", display_formatter=fmt_negative_linear(-5.4, 0.2)),
+            reg(0x07, "VCORE Voltage", max_value=0x3F, default_value=0x14, description="0.8V to 2.06V, 0.02V/step", display_formatter=fmt_volt_linear(0.8, 0.02)),
+            reg(0x08, "VIO Voltage", max_value=0x1F, default_value=0x10, description="1.0V to 2.55V, 0.05V/step", display_formatter=fmt_volt_linear(1.0, 0.05)),
+            reg(0x09, "VGL1 Voltage", max_value=0x3F, default_value=0x12, description="-5.4V to -18V, 0.2V/step", display_formatter=fmt_negative_linear(-5.4, 0.2)),
+            reg(0x0C, "VRESET Voltage", max_value=0x77, default_value=0x00, description="RESET1/RESET2 threshold, 2.0V to 2.7V, 0.1V/step"),
+            reg(0x0D, "GMA1 Voltage", max_value=0x3F, default_value=0x05, description="PVDD to PVDD-1.26V, 0.02V/step"),
+            reg(0x0E, "GMA2 Voltage", max_value=0x3F, default_value=0x05, description="NVDD to NVDD+1.26V, 0.02V/step"),
+            reg(0x0F, "PVDD CNTR1", default_value=0x00, description="PVDD OCP, slew rate and switching frequency"),
+            reg(0x10, "PVDD CNTR2", default_value=0x00, description="PVDD soft-start and delay"),
+            reg(0x11, "NVDD CNTR1", default_value=0x00, description="NVDD soft-start and delay"),
+            reg(0x12, "VGX CNTR1", default_value=0x00, description="VGH/VGL2 slew rate and switching frequency"),
+            reg(0x13, "VGX CNTR2", default_value=0x00, description="VGH soft-start and delay"),
+            reg(0x14, "VGX CNTR3", default_value=0x00, description="VGL soft-start and delay"),
+            reg(0x15, "VCORE CNTR1", default_value=0x00, description="VCORE slew rate and frequency"),
+            reg(0x16, "VCORE CNTR2", default_value=0x00, description="VCORE soft-start and delay"),
+            reg(0x17, "VIO CNTR1", default_value=0x00, description="VIO slew rate and frequency"),
+            reg(0x18, "VIO CNTR2", default_value=0x00, description="VIO soft-start and delay"),
+            reg(0x19, "RESET Delay", default_value=0x00, description="RESET1 / RESET2 delay"),
+            reg(
+                0x1B,
+                "VCOM Control",
+                max_value=0x3F,
+                default_value=0x00,
+                description="VCOM power-off source and delay",
+                bit_options=(
+                    bitopt("vcom_poweroff_vdet", "VCOM Power-Off", 0x20, enabled_label="Follow VDET", disabled_label="Follow UVLO"),
+                ),
+            ),
+            reg(0x1C, "NVDD CNTR2", default_value=0x00, description="NVDD slew rate and OCP"),
+            reg(0x1D, "VCOM_MIN", max_value=0x1F, default_value=0x0F, description="VCOM minimum voltage -3.6V to 0.75V, 0.15V/step"),
+            reg(0x1F, "RCOMP 1", default_value=0xAA, description="PVDD/NVDD/VGH/VGL2 compensation"),
+            reg(0x20, "RCOMP 2", default_value=0x05, description="VCORE/VIO compensation"),
+            reg(
+                0x21,
+                "Option1",
+                default_value=0xAF,
+                description="VGH low-temp, OTP/UVP and abnormal recovery options",
+                supports_slider=False,
+                bit_options=(
+                    bitopt("otp_en", "OTP", 0x20),
+                    bitopt("uvp_en", "UVP", 0x10),
+                ),
+            ),
+            reg(
+                0x22,
+                "Option2",
+                default_value=0x61,
+                description="UBRR/SIBO/VGH option controls",
+                supports_slider=False,
+                bit_options=(
+                    bitopt("sibo_en", "SIBO_EN", 0x40),
+                    bitopt("vgh_prechg", "VGH Precharge", 0x04),
+                    bitopt("vgl2_ocph", "VGL2 OCP High", 0x02, enabled_label="1.5A", disabled_label="0.75A"),
+                    bitopt("vcom_bias", "VCOM Bias", 0x01, enabled_label="High", disabled_label="Low"),
+                ),
+            ),
+            reg(0x23, "UBRR Control1", default_value=0x0F, description="UBRR3 channel enable routing"),
+            reg(0x24, "UBRR Control2", default_value=0x00, description="UBRR input source selection"),
+            reg(0x25, "UBRR Control3", default_value=0x06, description="UBRR iCOMP / iCTRL selection"),
+            reg(0x26, "UBRR Control4", default_value=0xFF, description="UBRR1 channel enable routing"),
+            reg(0x27, "UBRR Control5", default_value=0x3F, description="UBRR1 / UBRR3 reset and discharge routing"),
+            reg(0x28, "UBRR Control6", default_value=0x00, description="UBRR PVDD/NVDD detection level"),
+            reg(0x29, "UBRR Control7", default_value=0xFF, description="UBRR2 channel enable routing"),
+            reg(0x2A, "UBRR Control8", default_value=0xFF, description="UBRR2 reset and discharge routing"),
+            reg(0xFE, "WED_VCOM", max_value=0x08, default_value=0x00, description="Write VCOM voltage registers into EEPROM via bit3", writable=False),
+            reg(0xFF, "Control Register", max_value=0x81, default_value=0x00, description="RED source select on bit0 and WED_ALL on bit7", writable=False),
+        ),
+        vcom=VcomDefinition(
+            device_addr=0x50,
+            register_addr=0x00,
+            min_value=0x000,
+            max_value=0x7FF,
+            raw_shift=0,
+            dac_flag=0x00,
+            mtp_flag=0x00,
+            use_special_accessor=False,
+            no_register_access=False,
+            display_formatter=fmt_vcom_offset_from_min(_get_lx_vcom_min, step=0.00125),
+        ),
+        mtp_action=MtpAction(name="Standard MTP Commit", callback=_mtp_standard_commit),
+        mtp_read_mode="native",
     ),
 }
 

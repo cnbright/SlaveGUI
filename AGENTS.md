@@ -1,382 +1,219 @@
-# PMIC AUX GUI Agent Notes
+# IC_GUI Agent Guide
 
 ## Scope
-This file captures the PMIC and TCON knowledge already extracted from:
+This repository is a Windows desktop GUI for PMIC register and VCOM debugging over `IIC over AUX`.
+
+The current application code lives in `pmic_aux_gui/`. The `circuit_project/` tree is primarily upstream dependency material, experiment notebooks, and hardware reference assets. Treat it as reference unless a task explicitly requires changing the lower-level library.
+
+This file is for future agents and developers who need to modify the project with minimal rediscovery.
+
+## Project Layout
+- `pmic_aux_gui/`
+  - `profiles.py`: declarative hardware model for PMICs and TCONs
+  - `service.py`: hardware session lifecycle, worker subprocess bridge, read/write/VCOM/MTP logic
+  - `gui.py`: CustomTkinter UI, register pages, row state, VCOM panel, log panel
+  - `main.py`, `__main__.py`: app entry and worker-process entry
+- `run_pmic_aux_gui.py`: thin top-level launcher used by Nuitka
+- `build_nuitka.ps1`: one-file Windows packaging script
+- `requirements.txt`: minimal Python runtime dependency list
+- `circuit_project/pylib/`
+  - `OperateCardLib.py`, `OperateCardLib.dll`, `jtool.dll`: hardware access dependency
+- `circuit_project/exp/`: notebooks used as behavior references
+- `IC DATASHEET/`: PMIC datasheets used to derive register maps and formulas
+- `build/`, `pmic_aux_gui/__pycache__/`: generated artifacts, not primary edit targets
+
+## Run And Build
+- Dev run:
+  - `python -m pmic_aux_gui`
+  - or `python run_pmic_aux_gui.py`
+- Dependency install:
+  - `pip install -r requirements.txt`
+- Packaging:
+  - `powershell -ExecutionPolicy Bypass -File .\build_nuitka.ps1`
+
+`build_nuitka.ps1` bundles:
+- `app_icon.ico`
+- `circuit_project/pylib/OperateCardLib.py`
+- `circuit_project/pylib/OperateCardLib.dll`
+- `circuit_project/pylib/jtool.dll`
+
+If runtime behavior depends on a new local asset, packaging must usually be updated too.
+
+## Core Architecture
+
+### High-level model
+- `SessionConfig`: user-selected GPU/TCON/PMIC and library paths
+- `PmicProfile`: PMIC register map, VCOM definition, unlock requirements, MTP behavior
+- `TconProfile`: adapter class and AUX-ready sequence
+- `LocalAuxSession`: real hardware session
+- `_WorkerBackedAuxSession`: subprocess wrapper used by GUI to isolate DLL/hardware work from the UI thread
+- `PmicAuxGuiApp`: Tk/CTk application
+
+### Process model
+- The GUI does not talk to the DLL directly.
+- `connect()` in `service.py` starts a worker process by invoking:
+  - source mode: `python -m pmic_aux_gui --aux-worker <payload>`
+  - compiled mode: current executable with `--aux-worker`
+- Worker I/O is JSON over stdio.
+- Keep worker commands request/response shaped. Do not introduce UI-thread blocking DLL access in `gui.py`.
+
+### UI model
+- Register pages are cached per PMIC in `register_page_cache`.
+- Rows are built incrementally in batches to avoid a slow initial render.
+- Display refresh is dependency-aware and debounced through `DISPLAY_DEPENDENCIES`.
+- The right-side display column is for interpreted values or boolean state, not raw hex.
+- Raw editable values remain in the entry field.
+- Boolean bit controls should be described in profiles through `bit_options`, not hardcoded in GUI branches.
+
+## Current Supported Hardware
+
+### TCON
+- `anx` -> `ANX_ANX2176`
+- `nova` -> `Nova_NT71877`
+- `parade` -> `Parade_TC3410`
+
+### PMIC
+- `nvp2515`
+- `nt50805`
+- `rt6755`
+- `lx52042c`
+
+The codebase currently reflects all four PMICs above. Older notes that mention only three PMICs are outdated.
+
+## Current Behavior Contracts
+
+### Connection and init
+- User manually selects `GPU / TCON / PMIC`.
+- No hardware autodetect is implemented.
+- TCON init is lazy. First meaningful read/write triggers initialization.
+- `NOVA IIC_EN` is optional and user-controlled. Do not make it unconditional.
+- `default_paths()` resolves DLL/module paths under `circuit_project/pylib/`.
+
+### Read/write semantics
+- Standard PMIC register operations go through `iic_over_aux_read` / `iic_over_aux_write`.
+- `target="mtp"` on normal register writes triggers the profile MTP action after the write.
+- VCOM is handled separately and may not follow ordinary register semantics.
+- `Read All` / `Write All` intentionally exclude VCOM in the bulk path.
+
+### Safety constraints already encoded
+- Command-like registers such as `0xFE` and `0xFF` are marked `writable=False` where needed.
+- `RT6755` unlock registers `0x00` and `0x01` are not generic writable fields.
+- Preserve these constraints. Do not turn command/unlock registers into normal bulk-edit rows.
+
+### Display/value normalization
+- `normalize_register_value()` masks out unsupported bits.
+- Slider/editable numeric fields only control non-boolean bits.
+- Displayed voltages often depend on sibling registers, not just the current raw byte.
+- Voltage/state rendering should stay in `service.py` formatting helpers, not in widget code.
+
+## Editing Guidance
+
+### When changing hardware support
+- Start in `profiles.py` for register maps, bit options, VCOM definitions, unlock rules, and TCON startup sequences.
+- Use `service.py` for actual-value formulas, special read/write accessors, MTP actions, and worker-facing behavior.
+- Touch `gui.py` only when the profile-driven model is insufficient.
+
+### Preferred extension path
+- New boolean toggle:
+  - add `bit_options` in the relevant `RegisterDefinition`
+- New displayed voltage or interpreted text:
+  - implement in `format_register_display()` or `format_vcom_display()`
+- New PMIC:
+  - add a `PmicProfile`
+  - define register set, VCOM behavior, unlock/MTP behavior
+  - extend display logic if formulas depend on other registers
+  - update `DISPLAY_DEPENDENCIES` in `gui.py` if derived values depend on other rows
+- New TCON init path:
+  - add `InitStep` callbacks in `profiles.py`
+  - keep them callable from `LocalAuxSession.ensure_ready()`
+
+### What not to do
+- Do not bypass the worker and call DLL functions directly from GUI code.
+- Do not hardcode PMIC-specific widget behavior if the profile model can express it.
+- Do not make `NOVA IIC_EN` the default path for every NOVA panel.
+- Do not bulk-write special command registers or unlock bytes.
+- Do not edit Nuitka-generated `build/` outputs by hand unless the task is explicitly about compiled artifacts.
+
+## Reference Assets
+
+### Datasheets currently relevant
 - `IC DATASHEET/EDS-NVP2515-230503-0.2.pdf`
 - `IC DATASHEET/NT50805_External_Datasheet_V00_20220906.pdf`
 - `IC DATASHEET/RT6755-P03.pdf`
+- `IC DATASHEET/LX52042C_datasheet_preliminary_20231117.pdf`
+
+### Behavior references
 - `circuit_project/pylib/OperateCardLib.py`
-- `circuit_project/exp/AUX鍔熻兘/EXP_nova.ipynb`
-- `circuit_project/exp/VCOM鐑у綍/*.ipynb`
-- `circuit_project/exp/VOP娴嬭瘯/*.ipynb`
+- `circuit_project/exp/AUX.../EXP_nova.ipynb`
+- `circuit_project/exp/VCOM.../*.ipynb`
+- `circuit_project/exp/VOP.../*.ipynb`
 
-The purpose is to make follow-up development decision-light.
-
-## Current GUI / Service Model
-- Project package: `pmic_aux_gui`
-- Core files:
-  - `pmic_aux_gui/profiles.py`
-  - `pmic_aux_gui/service.py`
-  - `pmic_aux_gui/gui.py`
-- Runtime entry:
-  - `python -m pmic_aux_gui`
-- Current architecture:
-  - `SessionConfig`: connection parameters
-  - `AuxSession`: hardware lifecycle, init, read/write, MTP, VCOM
-  - `TCON profile`: ANX / NOVA / Parade
-  - `PMIC profile`: NVP2515 / NT50805 / RT6755
+Notebook and upstream library behavior should guide compatibility decisions when datasheet wording and existing field behavior conflict.
 
 ## TCON Notes
 
 ### ANX
 - Adapter class: `ANX_ANX2176`
-- IIC over AUX is implemented by password + DPCD path in `OperateCardLib.py`
-- Existing code uses:
-  - `write_dpcd(0x004F5, b"\x41\x56\x4F\x20\x16")`
-  - `write_dpcd(0x004F0, b"\x0E\x00\x00\x00")`
-  - `write_dpcd(0x004F3, b"\x01")`
-  - `write_dpcd(0x004F0, b"\x0E\x00\x00\x30\x09")`
+- Existing AUX entry relies on DPCD password/staging behavior in `OperateCardLib.py`
 
 ### NOVA
 - Adapter class: `Nova_NT71877`
-- Standard AUX enable path:
-  - `DPCD 0x00102 <- 0xC0`
-  - `IIC 0x60 / 0x02 <- 0x04 0x00`
-- Optional NOVA `IIC_EN` path exists in `EXP_nova.ipynb`
-- GUI already supports a connect option: `NOVA IIC_EN`
-- Current implemented `IIC_EN` sequence:
-  - `DPCD 0x00102 <- 0xC0`
-  - `DPCD 0x004C1 <- 0x14`
-  - `IIC 0x60 / 0x02 <- 0x01`
-  - `IIC 0x61 / 0x02 <- 0x04`
-  - `IIC 0x61 / 0x02 <- 0x04 0x00`
-  - `IIC 0x61 / 0x45 <- 0x44 0x05`
-  - `IIC 0x61 / 0x38 <- 0x9E 0x10`
-  - `DPCD 0x00102 <- 0x00`
-- Important: this path should remain optional, not defaulted for every NOVA panel.
+- Standard AUX enable path is implemented in `_step_nova_enable_aux()`
+- Optional `NOVA IIC_EN` path is implemented in `_step_nova_iic_en()`
+- This path must remain optional
 
 ### Parade
 - Adapter class: `Parade_TC3410`
-- AUX entry is implemented through DPCD command staging in `OperateCardLib.py`
+- AUX entry is library-driven through `OperateCardLib.py`
 
-## PMIC Summary
+## PMIC Notes
 
 ### Shared assumptions
-- Communication path for GUI is `IIC over AUX`
-- User manually selects `GPU / TCON / PMIC`
-- Hardware auto-detect is not implemented
-- Session init is lazy:
-  - First real register read/write triggers TCON init
-- `VCOM` is handled separately from normal register bulk operations
+- GUI communication path is `IIC over AUX`
+- VCOM is not treated as a normal bulk register field
+- MTP handling may be device-specific even when the UI presents a common DAC/MTP choice
 
-## NVP2515
+### NVP2515
+- PMIC slave address: `0x46`
+- D-VCOM write/read: `0x9E` / `0x9F`
+- VCOM uses logical `0x00..0x7F`
+- Raw transfer uses `(logical << 1) | flag`
+- `0xFE` and `0xFF` are command registers
 
-### Device addressing
-- PMIC 8-bit slave address: `0x46`
-- D-VCOM 8-bit slave address: `0x9E` write, `0x9F` read
-- PMIC 7-bit address in datasheet terms: `0x23`
+### NT50805
+- Current active PMIC slave address in code: `0x47`
+- Datasheet may show `0x46`; preserve current code behavior unless hardware evidence justifies a change
+- VCOM handling mirrors NVP2515 logic in the current GUI model
 
-### Key register map currently captured
-- `0x00`: Channel Setting 0
-- `0x01`: Channel Setting 1
-- `0x02`: Channel Discharge Setting
-- `0x03`: AVDD
-- `0x04`: AVEE
-- `0x05`: VGH
-- `0x06`: VGL
-- `0x07`: VCORE
-- `0x08`: VIO
-- `0x09`: LDO
-- `0x0A`: VCOM DAC register
-- `0x0B`: RESET threshold
-- `0x0C`: GMA1
-- `0x0D`: GMA2
-- `0x0E`: AVDD boost config
-- `0x0F`: AVDD delay / soft-start
-- `0x10`: AVEE config
-- `0x11`: VGH/VGL config
-- `0x12`: VGH delay / soft-start
-- `0x13`: VGL delay / soft-start
-- `0x14`: VCORE config
-- `0x15`: VCORE delay / soft-start
-- `0x16`: VIO config
-- `0x17`: VIO delay / soft-start
-- `0x18`: RESET delay
-- `0x19`: LDO delay
-- `0x1A`: VCOM config
-- `0x1B`: AVEE advanced config
-- `0x1C`: VCOM_MIN
-- `0xFE`: WED_VCOM
-- `0xFF`: Control register
+### RT6755
+- PMIC slave address: `0x47`
+- Access requires unlock before normal PMIC operations
+- Current unlock sequence:
+  - `0x00 <- 0x65`
+  - `0x01 <- 0x9A`
+- Generic PMIC MTP commit is still `0xFF <- 0x80`
+- No dedicated `VCOM_MIN` register is defined in the datasheet
+- VCOM uses coarse `0x0C` plus fine-tune D-VCOM on slave `0x9E`
 
-### Voltage formulas already implemented
-- `AVDD = 4.0 + 0.05 * code`
-- `AVEE = -4.0 - 0.1 * code`
-- `VGH`
-  - high resolution disabled: `6.0 + 0.2 * code`, clamped to `12.0`
-  - high resolution enabled: `12.5 + 0.5 * code`
-- `VGL = -5.4 - 0.2 * code`
-- `VCORE = 0.8 + 0.02 * code`
-- `VIO = 1.0 + 0.05 * code`
-- `LDO = 1.7 + 0.1 * code`, clamped to `2.8`
-- `RESET = 2.0 + 0.1 * code`
-- `GMA1 = AVDD - 0.02 * code`
-- `GMA2 = AVEE + 0.02 * code`
-- `VCOM_MIN`
-  - code `0x00..0x02` maps to `-3.6V`
-  - code `>= 0x03` maps to `-3.6 + 0.15 * (code - 2)`
-- `VCOM = VCOM_MIN + 0.01 * logical_code`
+### LX52042C
+- PMIC slave address: `0x46`
+- Supported in current code
+- Uses dedicated PMIC-side VCOM read/write handling in `service.py`
+- VCOM is split into coarse plus 3-bit LSB in the GUI
+- `0xFE` and `0xFF` are command-like and not generic writable rows
 
-### VCOM behavior
-- Uses D-VCOM command format, not ordinary PMIC register write flow
-- Existing notebook / library behavior assumes:
-  - DAC write: low bit = `1`
-  - MTP write: low bit = `0`
-  - logical range is `0x00..0x7F`
-  - raw transfer is `(logical << 1) | flag`
-- `FE` is special: write current VCOM DAC into EEPROM
-- `FF` control meanings:
-  - `0x00`: read DAC
-  - `0x01`: read EEPROM
-  - `0x80`: write all DAC into EEPROM
+## Known Gaps
+- Many multi-bit config registers are still byte-level hex editors instead of enums/segmented controls.
+- Actual-value formulas are partly dependency-based and not modeled as a fully normalized graph.
+- No automated test suite is present in this repository.
+- Hardware validation is the main verification path; code-only changes should at least preserve source run and import integrity.
 
-### Boolean controls currently surfaced
-- `0x00`: all output enable bits
-- `0x01`:
-  - `VGH High Resolution`
-  - `VIO PWM`
-  - `VCORE PWM`
-  - `PRE_AVDD`
-  - `CTRL`
-  - `RESET`
-  - `GMA2`
-  - `GMA1`
-- `0x02`: all discharge enable bits
-- `0x1A`:
-  - `VCOM Power-Off`: follow `RESET` vs follow `UVLO`
-
-## NT50805
-
-### Device addressing
-- PMIC 8-bit slave address in datasheet: `0x46`
-- Existing AUX notebooks often access PMIC as `0x47`
-- Existing codebase behavior must be preserved for current target hardware
-- In GUI profiles, current active slave address is `0x47`
-- This difference likely comes from board/address strap usage; do not "normalize" casually
-
-### Key register map currently captured
-- `0x00`: Channel Setting 0
-- `0x01`: Channel Setting 1
-- `0x02`: Channel Discharge Setting
-- `0x03`: AVDD
-- `0x04`: AVEE
-- `0x05`: VGH
-- `0x06`: VGL
-- `0x07`: VCORE
-- `0x08`: VIO
-- `0x09`: LDO
-- `0x0A`: VCOM DAC register
-- `0x0B`: VDET
-- `0x0C`: GMA1
-- `0x0D`: GMA2
-- `0x0E`: AVDD boost config
-- `0x0F`: AVDD delay / soft-start
-- `0x10`: AVEE delay / soft-start
-- `0x11`: VGH/VGL SIBO config
-- `0x12`: VGH delay / soft-start
-- `0x13`: VGL delay / soft-start
-- `0x14`: VCORE config
-- `0x15`: VCORE delay / soft-start
-- `0x16`: VIO config
-- `0x17`: VIO delay / soft-start
-- `0x18`: RESET delay
-- `0x19`: LDO delay
-- `0x1A`: VCOM config
-- `0x1B`: AVEE advanced config
-- `0x1C`: VCOM_MIN
-- `0x1D`: Boost PWM control
-- `0x20`: WP
-- `0x21`: UBRR WP
-- `0x22`: UBRR
-- `0xFE`: WED_VCOM
-- `0xFF`: Control register
-
-### Voltage formulas already implemented
-- `AVDD = 4.0 + 0.05 * (reg03 & 0x3F)`
-- `AVEE = -4.0 - 0.1 * (reg04 & 0x1F)`
-- `VGH`
-  - high resolution bit is currently interpreted from `0x01[7]`
-  - value source is `reg05`
-  - standard mode: `6.0 + 0.2 * code`, clamped to `12.0`
-  - high resolution mode: `12.5 + 0.5 * code`, clamped to `28.0`
-  - if `VGH_30` indicates 30V extension and computed value reaches 28V, map to `30.0V`
-- `VGL = -5.4 - 0.2 * (reg06 & 0x3F)`
-- `VCORE = 0.8 + 0.02 * (reg07 & 0x3F)`
-- `VIO = 1.0 + 0.05 * (reg08 & 0x1F)`
-- `LDO = min(1.7 + 0.1 * (reg09 & 0x0F), 2.8)`
-- `VDET = 2.0 + 0.1 * (reg0B & 0x07)`
-- `GMA1 = AVDD - 0.02 * (reg0C & 0x3F)`
-- `GMA2 = AVEE + 0.02 * (reg0D & 0x3F)`
-- `VCOM_MIN = -3.6 + 0.15 * (reg1C & 0x1F)`
-- `VCOM = VCOM_MIN + 0.01 * logical_code`
-
-### VCOM behavior
-- Same logical handling strategy as NVP2515 in current GUI
-- `logical_code` range is `0x00..0x7F`
-- `raw = logical << 1 | flag`
-- Current code treats:
-  - DAC write flag = `1`
-  - MTP write flag = `0`
-- `FE`: write VCOM command
-- `FF`:
-  - `0x00`: read DAC
-  - `0x01`: read EEPROM
-  - `0x80`: write all DAC into EEPROM
-
-### MTP behavior
-- Existing code and docs use:
-  - `slave 0x46, reg 0xFF, data 0x80`
-- GUI currently uses generic PMIC MTP commit for bulk non-VCOM register MTP path
-
-### Boolean controls currently surfaced
-- `0x00`: all output enable bits
-- `0x01`:
-  - `VGH High Resolution`
-  - `VIO PWM`
-  - `VCORE PWM`
-  - `PRE_AVDD`
-  - `RESET`
-  - `GMA2`
-  - `GMA1`
-- `0x02`: all discharge enable bits
-- `0x1A`:
-  - `VCOM Fast Discharge`
-  - `VCOM Power-Off`
-
-## RT6755
-
-### Device addressing
-- PMIC 8-bit slave address: `0x46`
-- PMIC read address: `0x47`
-- D-VCOM write: `0x9E`
-- D-VCOM read: `0x9F`
-
-### Unlock
-- Required before PMIC accesses
-- Existing verified sequence:
-  - write `0x65` to `0x00`
-  - write `0x9A` to `0x01`
-- GUI currently auto-runs unlock once before first real PMIC access
-
-### Key register map currently captured
-- `0x00`: Unlock Code 1
-- `0x01`: Unlock Code 2
-- `0x02`: Channel ON/OFF
-- `0x03`: Channel Mode
-- `0x04`: Channel Discharge
-- `0x05`: PAVDD
-- `0x06`: NAVDD
-- `0x07`: VGH
-- `0x08`: VGL
-- `0x09`: VCORE
-- `0x0A`: VIO
-- `0x0B`: LDO voltage / delay combo
-- `0x0C`: VCOM DAC register
-- `0x0D`: VCOM delay / RESET threshold combo
-- `0x0E`: GMA1
-- `0x0F`: GMA2
-- `0x10`: PAVDD config
-- `0x11`: PAVDD delay / soft-start
-- `0x12`: NAVDD delay / soft-start
-- `0x13`: NAVDD config
-- `0x14`: VGH/VGL config
-- `0x15`: VGH delay / soft-start
-- `0x16`: VGL delay / soft-start
-- `0x17`: VCORE config
-- `0x18`: VCORE delay / soft-start
-- `0x19`: VIO config
-- `0x1A`: VIO delay / soft-start
-- `0x1B`: VCOM / RESET config
-- `0xFF`: control register
-
-### Voltage formulas already implemented
-- `PAVDD = 4.0 + 0.05 * code`
-- `NAVDD = -4.0 - 0.1 * code`
-- `VGH`
-  - current GUI logic uses `0x03[7]`
-  - if high-resolution enabled: `10.0 + 1.0 * code`
-  - else: `6.0 + 0.2 * code`
-- `VGL = -5.4 - 0.2 * code`
-- `VCORE = 0.8 + 0.02 * code`
-- `VIO = 1.0 + 0.05 * code`
-- `GMA1 = PAVDD - 0.02 * code`
-- `GMA2 = NAVDD + 0.02 * code`
-- `VCOM = -2.56 + 0.02 * code`
-
-### VCOM behavior
-- Different from NVP2515 / NT50805
-- RT6755 datasheet shows dedicated D-VCOM command semantics and PMIC register `0x0C`
-- Current GUI profile uses:
-  - `use_special_accessor = False`
-  - direct logical range `0x00..0xFF`
-  - display formula `-2.56 + 0.02 * code`
-- Existing `OperateCardLib.py` `read_vcom/write_vcom` still targets the old `0x4F` style accessor for some notebook flows; for RT6755 this should be treated carefully in future refactors
-
-### MTP behavior
-- Datasheet control register `0xFF` controls read source / write-to-EEPROM mode
-- Existing notebook usage also uses:
-  - unlock first
-  - then `reg 0xFF <- 0x80` for MTP write path
-- GUI currently retains generic PMIC MTP commit for non-VCOM bulk MTP flow
-
-### Boolean controls currently surfaced
-- `0x02`: all output enable bits
-- `0x03`:
-  - `VGH High Resolution`
-  - `VIO FCCM`
-  - `VCORE FCCM`
-  - `RESET`
-  - `GMA2`
-  - `GMA1`
-- `0x04`: all discharge enable bits
-- `0x1B`:
-  - `VCOM Pull-Down`
-  - `VCOM Power-Off`
-
-## Bulk Write Safety Rules
-- The following should not participate in generic bulk write:
-  - `RT6755 0x00 / 0x01` unlock codes
-  - PMIC command registers like `0xFE / 0xFF`
-- This is already enforced in current profiles via `writable=False`
-
-## GUI Behavior Already Implemented
-- Right-side per-register display column shows:
-  - actual voltage for voltage-like registers
-  - `Enable` / `Disable` style status for boolean-only cases
-  - no longer shows raw hex in that column
-- Raw hex still exists in editable entry field
-- Boolean bits are exposed as radio-button controls under the parent register row
-- Changing a radio-button updates the backing register byte
-- `Read All` refreshes both:
-  - entry value
-  - displayed voltage / state
-  - boolean radio selections
-
-## Known Gaps / Future Work
-- Many multi-bit config fields still remain byte-level only:
-  - current limits
-  - slew rates
-  - soft-start
-  - delay values
-  - frequency selections
-- These should eventually become enums or segmented controls instead of raw hex/slider
-- Some formulas are based on currently selected mode bits and current GUI state, not a fully normalized dependency graph
-- `NT50805` address strap ambiguity (`0x46` vs `0x47`) should stay configurable if more panels are added
-- `RT6755` VCOM path likely deserves a dedicated UX review because PMIC register VCOM and D-VCOM command path both exist in docs
-
-## Development Rules For Future Edits
-- Preserve lazy init behavior
-- Keep NOVA `IIC_EN` optional
-- Do not convert command / unlock registers into normal bulk-writable config rows
-- When adding a new boolean UI item, prefer `bit_options` in profile rather than hardcoding GUI logic
-- When adding a new voltage display, prefer computing actual values in `service.py` using current register context
+## Practical Rules For Future Agents
+- Prefer editing source files under `pmic_aux_gui/`.
+- Treat `circuit_project/` as reference or bundled dependency, not as default edit surface.
+- Preserve worker-process isolation.
+- Preserve lazy init.
+- Preserve optional `NOVA IIC_EN`.
+- Keep profile-driven UI behavior whenever possible.
+- When adding hardware formulas, keep current register context in mind.
+- If a behavior differs between datasheet and existing notebooks/library code, document the decision and bias toward compatibility unless the task explicitly asks for a correction.

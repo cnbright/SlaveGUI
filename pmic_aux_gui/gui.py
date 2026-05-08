@@ -7,7 +7,7 @@ from tkinter import messagebox
 
 import customtkinter as ctk
 
-from .profiles import GPU_CARD_IDS, PMIC_PROFILES, TCON_PROFILES, RegisterDefinition, BitOptionDefinition
+from .profiles import GPU_CARD_IDS, NOVA_IIC_EN_SCHEMES, PMIC_PROFILES, TCON_PROFILES, RegisterDefinition, BitOptionDefinition
 from .service import AuxGuiError, SessionConfig, connect, default_paths, parse_hex_input, format_register_display, format_vcom_display
 
 
@@ -39,6 +39,7 @@ class RegisterPageState:
     pmic_key: str
     frame: ctk.CTkFrame
     rows: dict[str, RegisterRowState]
+    current_values: dict[str, int]
     status_var: tk.StringVar
     loading_label: ctk.CTkLabel
     pending_registers: list[RegisterDefinition]
@@ -47,10 +48,43 @@ class RegisterPageState:
 
 
 class PmicAuxGuiApp(ctk.CTk):
+    REFRESH_DEBOUNCE_MS = 24
     COLLAPSIBLE_REGISTER_NAMES = {
         "channel setting 0",
         "channel setting 1",
         "channel discharge setting",
+    }
+    DISPLAY_DEPENDENCIES = {
+        "nvp2515": {
+            "reg_01": ("reg_05",),
+            "reg_03": ("reg_0C",),
+            "reg_04": ("reg_0D",),
+            "reg_1C": ("__vcom__",),
+        },
+        "b602": {
+            "reg_01": ("reg_05",),
+            "reg_03": ("reg_0C",),
+            "reg_04": ("reg_0D",),
+            "reg_1C": ("__vcom__",),
+        },
+        "nt50805": {
+            "reg_01": ("reg_05",),
+            "reg_03": ("reg_0C",),
+            "reg_04": ("reg_0D",),
+            "reg_1C": ("__vcom__",),
+        },
+        "rt6755": {
+            "reg_03": ("reg_07",),
+            "reg_05": ("reg_0E",),
+            "reg_06": ("reg_0F",),
+            "reg_0C": ("__vcom__",),
+        },
+        "lx52042c": {
+            "reg_01": ("reg_05",),
+            "reg_03": ("reg_0D",),
+            "reg_04": ("reg_0E",),
+            "reg_1D": ("__vcom__",),
+        },
     }
 
     def __init__(self, base_dir: Path):
@@ -62,6 +96,9 @@ class PmicAuxGuiApp(ctk.CTk):
         self.register_page_cache: dict[str, RegisterPageState] = {}
         self.active_register_page_key: str | None = None
         self._editor_sync_guard: set[str] = set()
+        self._pending_row_refreshes: set[str] = set()
+        self._pending_vcom_refresh = False
+        self._refresh_after_id: str | None = None
         self.default_dll_path, self.default_operate_path = default_paths(base_dir)
         self.title("PMIC AUX Debug GUI")
         self.geometry("1500x920")
@@ -71,12 +108,17 @@ class PmicAuxGuiApp(ctk.CTk):
         self.gpu_var = tk.StringVar(value="amd_dp")
         self.tcon_var = tk.StringVar(value="nova")
         self.pmic_var = tk.StringVar(value="nt50805")
+        self.pmic_addr_var = tk.StringVar(value=f"{PMIC_PROFILES['nt50805'].slave_addr:02X}")
         self.nova_iic_en_var = tk.BooleanVar(value=False)
+        self.nova_iic_en_scheme_var = tk.StringVar(value="IO1")
         self.status_var = tk.StringVar(value="Disconnected")
         self.init_var = tk.StringVar(value="Not initialized")
+        self.vcom_title_var = tk.StringVar(value="VCOM")
         self.vcom_var = tk.StringVar(value="0x00")
         self.vcom_slider_var = tk.IntVar(value=0)
         self.vcom_actual_var = tk.StringVar(value="--")
+        self.vcom_coarse_var = tk.StringVar(value="--")
+        self.vcom_lsb_var = tk.StringVar(value="--")
 
         self._build_layout()
         self.after(1, self._reload_register_rows)
@@ -98,19 +140,35 @@ class PmicAuxGuiApp(ctk.CTk):
 
         top = ctk.CTkFrame(self, corner_radius=14)
         top.grid(row=0, column=0, sticky="ew", padx=12, pady=(12, 8))
-        for index in range(10):
-            top.grid_columnconfigure(index, weight=1 if index in (1, 3, 5, 7) else 0)
+        for index in range(12):
+            top.grid_columnconfigure(index, weight=1 if index in (1, 3, 5, 8) else 0)
 
         ctk.CTkLabel(top, text="GPU / CardID").grid(row=0, column=0, padx=8, pady=8, sticky="w")
         ctk.CTkOptionMenu(top, values=list(GPU_CARD_IDS.keys()), variable=self.gpu_var).grid(row=0, column=1, padx=8, pady=8, sticky="ew")
         ctk.CTkLabel(top, text="TCON").grid(row=0, column=2, padx=8, pady=8, sticky="w")
         ctk.CTkOptionMenu(top, values=list(TCON_PROFILES.keys()), variable=self.tcon_var, command=lambda _v: self._reload_register_rows()).grid(row=0, column=3, padx=8, pady=8, sticky="ew")
         ctk.CTkLabel(top, text="PMIC").grid(row=0, column=4, padx=8, pady=8, sticky="w")
-        ctk.CTkOptionMenu(top, values=list(PMIC_PROFILES.keys()), variable=self.pmic_var, command=lambda _v: self._reload_register_rows()).grid(row=0, column=5, padx=8, pady=8, sticky="ew")
-        self.nova_iic_en_switch = ctk.CTkSwitch(top, text="NOVA IIC_EN", variable=self.nova_iic_en_var, onvalue=True, offvalue=False)
-        self.nova_iic_en_switch.grid(row=0, column=6, padx=8, pady=8, sticky="w")
-        ctk.CTkButton(top, text="Connect", command=self._connect).grid(row=0, column=7, padx=8, pady=8, sticky="ew")
-        ctk.CTkButton(top, text="Disconnect", command=self._disconnect).grid(row=0, column=8, padx=8, pady=8, sticky="ew")
+        ctk.CTkOptionMenu(top, values=list(PMIC_PROFILES.keys()), variable=self.pmic_var, command=self._on_pmic_change).grid(row=0, column=5, padx=8, pady=8, sticky="ew")
+        ctk.CTkLabel(top, text="PMIC Addr").grid(row=0, column=6, padx=(8, 4), pady=8, sticky="w")
+        pmic_addr_frame = ctk.CTkFrame(top, fg_color="transparent")
+        pmic_addr_frame.grid(row=0, column=7, padx=(0, 8), pady=8, sticky="ew")
+        pmic_addr_frame.grid_columnconfigure(1, weight=1)
+        ctk.CTkLabel(pmic_addr_frame, text="0x").grid(row=0, column=0, padx=(0, 4), sticky="w")
+        ctk.CTkEntry(pmic_addr_frame, textvariable=self.pmic_addr_var, width=72).grid(row=0, column=1, sticky="ew")
+        nova_iic_en_frame = ctk.CTkFrame(top, fg_color="transparent")
+        nova_iic_en_frame.grid(row=0, column=8, padx=8, pady=8, sticky="ew")
+        nova_iic_en_frame.grid_columnconfigure(1, weight=1)
+        self.nova_iic_en_switch = ctk.CTkSwitch(nova_iic_en_frame, text="NOVA IIC_EN", variable=self.nova_iic_en_var, onvalue=True, offvalue=False)
+        self.nova_iic_en_switch.grid(row=0, column=0, padx=(0, 8), sticky="w")
+        self.nova_iic_en_scheme_menu = ctk.CTkOptionMenu(
+            nova_iic_en_frame,
+            values=[str(scheme["name"]) for scheme in NOVA_IIC_EN_SCHEMES.values()],
+            variable=self.nova_iic_en_scheme_var,
+            width=96,
+        )
+        self.nova_iic_en_scheme_menu.grid(row=0, column=1, sticky="e")
+        ctk.CTkButton(top, text="Connect", command=self._connect).grid(row=0, column=9, padx=8, pady=8, sticky="ew")
+        ctk.CTkButton(top, text="Disconnect", command=self._disconnect).grid(row=0, column=10, padx=8, pady=8, sticky="ew")
 
         ctk.CTkLabel(top, text="Status").grid(row=1, column=0, padx=8, pady=(0, 8), sticky="w")
         ctk.CTkLabel(top, textvariable=self.status_var, anchor="w").grid(row=1, column=1, columnspan=3, padx=8, pady=(0, 8), sticky="ew")
@@ -138,14 +196,21 @@ class PmicAuxGuiApp(ctk.CTk):
         vcom_frame.grid_columnconfigure(1, weight=1)
         for index in range(2):
             vcom_frame.grid_columnconfigure(index, weight=1)
-        ctk.CTkLabel(vcom_frame, text="VCOM", font=ctk.CTkFont(size=18, weight="bold")).grid(row=0, column=0, sticky="w", padx=8, pady=(8, 2))
+        ctk.CTkLabel(vcom_frame, textvariable=self.vcom_title_var, font=ctk.CTkFont(size=18, weight="bold")).grid(row=0, column=0, sticky="w", padx=8, pady=(8, 2))
         ctk.CTkLabel(vcom_frame, textvariable=self.vcom_actual_var, anchor="e").grid(row=0, column=1, padx=8, pady=(8, 2), sticky="e")
         ctk.CTkLabel(vcom_frame, text="Value").grid(row=1, column=0, padx=8, pady=(4, 6), sticky="w")
         ctk.CTkEntry(vcom_frame, textvariable=self.vcom_var).grid(row=1, column=1, padx=8, pady=(4, 6), sticky="ew")
+        self.vcom_split_frame = ctk.CTkFrame(vcom_frame, fg_color="transparent")
+        self.vcom_split_frame.grid(row=2, column=0, columnspan=2, sticky="ew", padx=8, pady=(0, 2))
+        self.vcom_split_frame.grid_columnconfigure(1, weight=1)
+        ctk.CTkLabel(self.vcom_split_frame, text="VCOM coarse").grid(row=0, column=0, sticky="w", padx=(0, 8), pady=(2, 0))
+        ctk.CTkLabel(self.vcom_split_frame, textvariable=self.vcom_coarse_var, anchor="e").grid(row=0, column=1, sticky="e", pady=(2, 0))
+        ctk.CTkLabel(self.vcom_split_frame, text="VCOM_LSB").grid(row=1, column=0, sticky="w", padx=(0, 8), pady=(2, 0))
+        ctk.CTkLabel(self.vcom_split_frame, textvariable=self.vcom_lsb_var, anchor="e").grid(row=1, column=1, sticky="e", pady=(2, 0))
         self.vcom_slider = ctk.CTkSlider(vcom_frame, from_=0, to=255, number_of_steps=255, variable=self.vcom_slider_var, command=self._on_vcom_slider)
-        self.vcom_slider.grid(row=2, column=0, columnspan=2, padx=8, pady=(2, 8), sticky="ew")
+        self.vcom_slider.grid(row=3, column=0, columnspan=2, padx=8, pady=(2, 8), sticky="ew")
         actions = ctk.CTkFrame(vcom_frame, fg_color="transparent")
-        actions.grid(row=3, column=0, columnspan=2, sticky="ew", padx=8, pady=(0, 8))
+        actions.grid(row=4, column=0, columnspan=2, sticky="ew", padx=8, pady=(0, 8))
         for index in range(4):
             actions.grid_columnconfigure(index % 2, weight=1)
         ctk.CTkButton(actions, text="Read DAC", height=30, command=lambda: self._read_vcom("dac")).grid(row=0, column=0, padx=4, pady=4, sticky="ew")
@@ -176,8 +241,15 @@ class PmicAuxGuiApp(ctk.CTk):
         self._sync_nova_toggle()
         profile = PMIC_PROFILES[self.pmic_var.get()]
         self.vcom_slider.configure(from_=profile.vcom.min_value, to=profile.vcom.max_value, number_of_steps=profile.vcom.max_value - profile.vcom.min_value)
+        self._sync_vcom_split_visibility(profile)
+        self._sync_vcom_title(profile)
         self._show_register_page(self.pmic_var.get())
         self._refresh_vcom_display()
+
+    def _on_pmic_change(self, pmic_key: str) -> None:
+        self.pmic_var.set(pmic_key)
+        self.pmic_addr_var.set(f"{PMIC_PROFILES[pmic_key].slave_addr:02X}")
+        self._reload_register_rows()
 
     def _create_register_page(self, pmic_key: str) -> RegisterPageState:
         profile = PMIC_PROFILES[pmic_key]
@@ -190,6 +262,10 @@ class PmicAuxGuiApp(ctk.CTk):
             pmic_key=pmic_key,
             frame=page_frame,
             rows={},
+            current_values={
+                register.key: register.default_value if register.default_value is not None else register.min_value
+                for register in profile.registers
+            },
             status_var=status_var,
             loading_label=loading_label,
             pending_registers=list(profile.registers),
@@ -204,6 +280,7 @@ class PmicAuxGuiApp(ctk.CTk):
             if page is not None:
                 self.register_rows = page.rows
             return
+        self._cancel_pending_refreshes()
         if self.active_register_page_key is not None:
             current_page = self.register_page_cache.get(self.active_register_page_key)
             if current_page is not None:
@@ -233,7 +310,7 @@ class PmicAuxGuiApp(ctk.CTk):
                 self.register_rows = page.rows
                 self._refresh_vcom_display()
             return
-        batch_size = 6
+        batch_size = 12
         start_index = len(page.rows) + 1
         for row_offset in range(batch_size):
             if not page.pending_registers:
@@ -290,7 +367,7 @@ class PmicAuxGuiApp(ctk.CTk):
         bit_option_vars: dict[str, tk.StringVar] = {}
         options_frame: ctk.CTkFrame | None = None
         toggle_button: ctk.CTkButton | None = None
-        collapsed = bool(register.bit_options and self._is_collapsible_register(register))
+        collapsed = bool(register.bit_options and self._is_default_collapsed_register(register))
         if register.bit_options:
             options_frame = ctk.CTkFrame(row, fg_color="transparent")
             options_frame.grid(row=1, column=0, columnspan=5, padx=6, pady=(0, 6), sticky="ew")
@@ -356,7 +433,7 @@ class PmicAuxGuiApp(ctk.CTk):
         page.rows[register.key] = state
         if self.active_register_page_key == page.pmic_key:
             self.register_rows = page.rows
-            self._refresh_row_display(register.key)
+            self._refresh_row_display(register.key, page.current_values.copy())
 
     def _refresh_current_register_ui(self) -> None:
         if self.active_register_page_key is None:
@@ -370,34 +447,52 @@ class PmicAuxGuiApp(ctk.CTk):
             return
         self.register_rows = page.rows
         if page.rows:
-            self._refresh_all_row_displays()
+            self._refresh_all_row_displays(page.current_values.copy())
         else:
-            self._refresh_vcom_display()
+            self._refresh_vcom_display(page.current_values.copy())
 
     def _is_collapsible_register(self, definition: RegisterDefinition) -> bool:
+        if self.pmic_var.get() == "lx52042c" and definition.bit_options:
+            return True
         return definition.name.strip().lower() in self.COLLAPSIBLE_REGISTER_NAMES
+
+    def _is_default_collapsed_register(self, definition: RegisterDefinition) -> bool:
+        return self._is_collapsible_register(definition)
 
     def log(self, message: str) -> None:
         self.log_box.insert("end", f"{message}\n")
         self.log_box.see("end")
-        self.update_idletasks()
 
     def _current_config(self) -> SessionConfig:
+        pmic_addr = parse_hex_input(f"0x{self.pmic_addr_var.get().strip()}")
+        if not 0x00 <= pmic_addr <= 0xFF:
+            raise AuxGuiError("PMIC address must be in range 0x00 to 0xFF")
         return SessionConfig(
             gpu_key=self.gpu_var.get(),
             tcon_key=self.tcon_var.get(),
             pmic_key=self.pmic_var.get(),
+            pmic_slave_addr=pmic_addr,
             dll_path=self.default_dll_path,
             operate_module_path=self.default_operate_path,
             nova_use_iic_en=bool(self.nova_iic_en_var.get()),
+            nova_iic_en_scheme=self._nova_iic_en_scheme_key(),
         )
 
     def _sync_nova_toggle(self) -> None:
         if self.tcon_var.get() == "nova":
             self.nova_iic_en_switch.configure(state="normal")
+            self.nova_iic_en_scheme_menu.configure(state="normal")
         else:
             self.nova_iic_en_var.set(False)
             self.nova_iic_en_switch.configure(state="disabled")
+            self.nova_iic_en_scheme_menu.configure(state="disabled")
+
+    def _nova_iic_en_scheme_key(self) -> str:
+        selected_name = self.nova_iic_en_scheme_var.get()
+        for key, scheme in NOVA_IIC_EN_SCHEMES.items():
+            if selected_name == scheme["name"]:
+                return key
+        return "io1"
 
     def _connect(self) -> None:
         self._disconnect()
@@ -428,8 +523,14 @@ class PmicAuxGuiApp(ctk.CTk):
             results = session.read_all_registers(target=target, exclude_vcom=True)
             for reg_key, value in results.items():
                 if isinstance(value, int) and reg_key in self.register_rows:
-                    self._update_row_value(reg_key, value)
-            self._refresh_vcom_display()
+                    try:
+                        self._update_row_value(reg_key, value)
+                    except Exception as exc:
+                        raise AuxGuiError(f"UI update failed at {reg_key}: {exc}") from exc
+            try:
+                self._refresh_all_row_displays()
+            except Exception as exc:
+                raise AuxGuiError(f"VCOM display refresh failed: {exc}") from exc
             self.log(f"Read all registers through {target.upper()} path")
             self.init_var.set(session.init_summary)
         except Exception as exc:
@@ -445,6 +546,7 @@ class PmicAuxGuiApp(ctk.CTk):
             session.write_all_registers(values, target=target, exclude_vcom=True)
             for reg_key, value in values.items():
                 self._update_row_value(reg_key, value)
+            self._refresh_all_row_displays()
             self.log(f"Wrote all registers through {target.upper()} path")
             self.init_var.set(session.init_summary)
         except Exception as exc:
@@ -454,7 +556,8 @@ class PmicAuxGuiApp(ctk.CTk):
         try:
             session = self._require_session()
             value = session.read_vcom(target=target)
-            self.vcom_var.set(f"0x{value:02X}")
+            width = 3 if session.pmic_profile.key == "lx52042c" else 2
+            self.vcom_var.set(f"0x{value:0{width}X}")
             self.vcom_slider_var.set(value)
             actual = format_vcom_display(session.pmic_profile, value, self._collect_current_row_values())
             self.vcom_actual_var.set(actual)
@@ -485,6 +588,9 @@ class PmicAuxGuiApp(ctk.CTk):
     def _update_row_value(self, reg_key: str, value: int) -> None:
         row = self.register_rows[reg_key]
         normalized = self._normalize_register_value(row.definition, value)
+        page = self._current_register_page()
+        if page is not None:
+            page.current_values[reg_key] = normalized
         row.raw_value_var.set(f"0x{normalized:02X}")
 
     def _on_register_slider(self, reg_key: str, value: float) -> None:
@@ -502,7 +608,7 @@ class PmicAuxGuiApp(ctk.CTk):
     def _on_register_value_change(self, reg_key: str) -> None:
         if reg_key not in self.register_rows:
             return
-        self._refresh_all_row_displays()
+        self._schedule_impacted_refresh(reg_key)
 
     def _on_editor_value_change(self, reg_key: str) -> None:
         if reg_key in self._editor_sync_guard or reg_key not in self.register_rows:
@@ -516,7 +622,7 @@ class PmicAuxGuiApp(ctk.CTk):
             return
         self._set_row_numeric_value(reg_key, numeric_value)
 
-    def _refresh_row_display(self, reg_key: str) -> None:
+    def _refresh_row_display(self, reg_key: str, current_values: dict[str, int] | None = None) -> None:
         row = self.register_rows[reg_key]
         value = self._try_parse_row_value(row.raw_value_var.get())
         if value is None:
@@ -532,7 +638,8 @@ class PmicAuxGuiApp(ctk.CTk):
                 self._editor_sync_guard.add(reg_key)
                 row.editor_var.set(editor_text)
                 self._editor_sync_guard.discard(reg_key)
-        current_values = self._collect_current_row_values()
+        if current_values is None:
+            current_values = self._current_values_snapshot()
         current_values[reg_key] = clamped_value
         display_text = format_register_display(PMIC_PROFILES[self.pmic_var.get()], reg_key, clamped_value, current_values)
         if row.definition.bit_options and not row.numeric_mask:
@@ -544,10 +651,12 @@ class PmicAuxGuiApp(ctk.CTk):
         if row.toggle_button is not None:
             row.toggle_button.configure(text="Expand" if row.collapsed else "Collapse")
 
-    def _refresh_all_row_displays(self) -> None:
+    def _refresh_all_row_displays(self, current_values: dict[str, int] | None = None) -> None:
+        self._cancel_pending_refreshes()
+        snapshot = current_values or self._current_values_snapshot()
         for reg_key in self.register_rows:
-            self._refresh_row_display(reg_key)
-        self._refresh_vcom_display()
+            self._refresh_row_display(reg_key, snapshot)
+        self._refresh_vcom_display(snapshot)
 
     def _collect_current_row_values(self) -> dict[str, int]:
         values: dict[str, int] = {}
@@ -556,6 +665,60 @@ class PmicAuxGuiApp(ctk.CTk):
             if value is not None:
                 values[key] = self._normalize_register_value(state.definition, value)
         return values
+
+    def _current_register_page(self) -> RegisterPageState | None:
+        if self.active_register_page_key is None:
+            return None
+        return self.register_page_cache.get(self.active_register_page_key)
+
+    def _current_values_snapshot(self) -> dict[str, int]:
+        page = self._current_register_page()
+        if page is not None:
+            return page.current_values.copy()
+        return self._collect_current_row_values()
+
+    def _impacted_targets(self, reg_key: str) -> tuple[set[str], bool]:
+        impacted_rows = {reg_key}
+        refresh_vcom = False
+        profile_key = self.pmic_var.get()
+        dependencies = self.DISPLAY_DEPENDENCIES.get(profile_key, {})
+        for target in dependencies.get(reg_key, ()):
+            if target == "__vcom__":
+                refresh_vcom = True
+            else:
+                impacted_rows.add(target)
+        return impacted_rows, refresh_vcom
+
+    def _schedule_impacted_refresh(self, reg_key: str) -> None:
+        impacted_rows, refresh_vcom = self._impacted_targets(reg_key)
+        self._pending_row_refreshes.update(impacted_rows)
+        self._pending_vcom_refresh = self._pending_vcom_refresh or refresh_vcom
+        if self._refresh_after_id is not None:
+            self.after_cancel(self._refresh_after_id)
+        self._refresh_after_id = self.after(self.REFRESH_DEBOUNCE_MS, self._flush_scheduled_refreshes)
+
+    def _flush_scheduled_refreshes(self) -> None:
+        self._refresh_after_id = None
+        if not self.register_rows:
+            self._pending_row_refreshes.clear()
+            self._pending_vcom_refresh = False
+            return
+        snapshot = self._current_values_snapshot()
+        pending_rows = [reg_key for reg_key in self.register_rows if reg_key in self._pending_row_refreshes]
+        refresh_vcom = self._pending_vcom_refresh
+        self._pending_row_refreshes.clear()
+        self._pending_vcom_refresh = False
+        for reg_key in pending_rows:
+            self._refresh_row_display(reg_key, snapshot)
+        if refresh_vcom:
+            self._refresh_vcom_display(snapshot)
+
+    def _cancel_pending_refreshes(self) -> None:
+        if self._refresh_after_id is not None:
+            self.after_cancel(self._refresh_after_id)
+            self._refresh_after_id = None
+        self._pending_row_refreshes.clear()
+        self._pending_vcom_refresh = False
 
     def _try_parse_row_value(self, text: str) -> int | None:
         try:
@@ -594,6 +757,9 @@ class PmicAuxGuiApp(ctk.CTk):
             current_raw = row.definition.default_value if row.definition.default_value is not None else row.definition.min_value
         current_raw = self._normalize_register_value(row.definition, current_raw)
         next_raw = (current_raw & ~row.numeric_mask) | (numeric_value & row.numeric_mask)
+        page = self._current_register_page()
+        if page is not None:
+            page.current_values[reg_key] = next_raw
         row.raw_value_var.set(f"0x{next_raw:02X}")
 
     def _bit_is_enabled(self, value: int, option: BitOptionDefinition) -> bool:
@@ -620,15 +786,36 @@ class PmicAuxGuiApp(ctk.CTk):
             row.toggle_button.configure(text="Expand" if row.collapsed else "Collapse")
 
     def _on_vcom_slider(self, value: float) -> None:
-        self.vcom_var.set(f"0x{int(round(value)):02X}")
+        profile = PMIC_PROFILES[self.pmic_var.get()]
+        width = 3 if profile.key == "lx52042c" else 2
+        self.vcom_var.set(f"0x{int(round(value)):0{width}X}")
 
-    def _refresh_vcom_display(self) -> None:
+    def _refresh_vcom_display(self, current_values: dict[str, int] | None = None) -> None:
         value = self._try_parse_row_value(self.vcom_var.get())
         if value is None:
             self.vcom_actual_var.set("--")
+            self.vcom_coarse_var.set("--")
+            self.vcom_lsb_var.set("--")
             return
         profile = PMIC_PROFILES[self.pmic_var.get()]
-        self.vcom_actual_var.set(format_vcom_display(profile, value, self._collect_current_row_values()))
+        self.vcom_actual_var.set(format_vcom_display(profile, value, current_values or self._current_values_snapshot()))
+        if profile.key == "lx52042c":
+            coarse = (value >> 3) & 0xFF
+            lsb = value & 0x07
+            self.vcom_coarse_var.set(f"0x{coarse:02X} ({coarse * 10:.1f}mV)")
+            self.vcom_lsb_var.set(f"0x{lsb:02X} ({lsb * 1.25:.2f}mV)")
+        else:
+            self.vcom_coarse_var.set("--")
+            self.vcom_lsb_var.set("--")
+
+    def _sync_vcom_split_visibility(self, profile) -> None:
+        if profile.key == "lx52042c":
+            self.vcom_split_frame.grid()
+        else:
+            self.vcom_split_frame.grid_remove()
+
+    def _sync_vcom_title(self, profile) -> None:
+        self.vcom_title_var.set(profile.vcom.name)
 
     def _allowed_value_mask(self, definition: RegisterDefinition) -> int:
         logic_mask = 0
@@ -654,5 +841,6 @@ class PmicAuxGuiApp(ctk.CTk):
             if page.build_after_id is not None:
                 self.after_cancel(page.build_after_id)
                 page.build_after_id = None
+        self._cancel_pending_refreshes()
         self._disconnect()
         self.destroy()

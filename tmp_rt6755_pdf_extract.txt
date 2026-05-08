@@ -1,0 +1,4830 @@
+
+=== PAGE 1 ===
+  Preliminary RT6755 
+Copyright © 2021 Richtek Technology Corporation. All rights reserved.                  is a registered trademark of Richtek Technology Corporation. 
+DS6755-P03   December  2021   www.richtek.com 
+1 
+ 
+TFT LCD Integrated Power Module for Gaming Notebook  
+General Description 
+The RT6755 is an I2C interface programmable power 
+management IC. The IC  includes one synchronous 
+boost converters for PAVDD, one synchronous NAVDD 
+buck-boost, one SIBO (Single Inductor Bipolar Output) 
+converter for VGH and VGL, one high performance 
+VCOM with 8- bit Calibrator, two GMA1/2 and one 
+RESET voltage detector with available in a 
+UQFN-28TL 3.5x3.5 (FC) package, this device is 
+suitable for gaming notebook TFT-LCD panel.  
+The IC can operate from 2.5V to 5V input voltages. 
+High switching frequency operation allows a compact 
+PCB circuit area with small inductors and capacit ors. 
+Current-limit functions are provided for all internal - 
+switch converters, and output -fault shutdown protects 
+all converters against output -fault conditions. 
+Programmable soft-start functions for all output voltage 
+to limit input inrush current during startup. 
+Ordering Information 
+Package Type
+QUF : UQFN-28TL 3.5x3.5 (FC) (U-Type)
+Lead Plating System
+G : Green (Halogen Free and Pb Free)
+RT6755
+ Note : 
+Richtek products are : 
+ RoHS compliant and compatible with the current 
+requirements of IPC/JEDEC J-STD-020. 
+ Suitable for use in SnPb or Pb-free soldering processes. 
+Marking Information 
+20=YM
+DNN
+20= : Product Code
+YMDNN : Date Code
+ 
+ 
+ 
+ 
+Features 
+ 2.5V to 5V Input Supply Range 
+ I2C Interface 
+ PAVDD Synchronous Boost Converter 
+ Programmable Output Range from 4V to 7V 
+ Output Current Capability up to 400mA 
+ Current Limitation Protection 
+ NAVDD Synchronous Inverting Converter 
+ Programmable Output Voltage −4V to −7V 
+ Output Current Capability up to 400mA 
+ Current Limitation Protection 
+ VGH / VGL Synchronous SIBO Converter 
+ VGH Programmable Output Range from 6V to 
+30V 
+ VGL Programmable Output Range −6V to −18V 
+ VGH and VGL Output Current Capability up to 
+20mA 
+ VCORE and VIO Synchronous Buck Converter 
+ VCORE Programmable Output Range from 0.8V 
+to 2V 
+ VIO Programmable Output Range from 1V to 
+2.5V 
+ Low Dropout Voltage Linear Regulator 
+ VCOM 8bits Programmable Output Voltage 
+ GMA1/2 Programmable Gamma Output Voltage 
+ Programmable Voltage Detector 
+ Built in UVLO, UVP, OVP , SCP and OTP 
+protection 
+ RoHS Compliant and Halogen Free 
+Applications 
+ TFT-LCD Notebook 
+ TFT-LCD Tablet 
+ 
+ 
+ 
+ 
+ 
+ 
+
+=== PAGE 2 ===
+RT6755 Preliminary  
+Copyright © 2021 Richtek Technology Corporation. All rights reserved.                  is a registered trademark of Richtek Technology Corporation.  
+www.richtek.com  DS6755-P03   December  2021  
+2 
+ 
+Pin Configuration 
+ (TOP VIEW)   
+12111098
+7
+6
+5
+3
+2
+1
+4
+17
+13
+16
+15
+14
+PGND 18
+19
+20
+21
+22232425262728
+29 LX
+PGND
+LXP
+VGL
+VGH
+AGND
+VIO
+LXB2
+VIN
+VCORE
+LXB1
+PGNDB
+COMP
+LXN
+VINP
+SDA
+EXT EN
+SCL
+NAVDD
+VINN
+LXI
+NEG
+VCOM
+GMA2
+LDO PAVDD
+GMA1
+RESET
+ 
+UQFN-28L 3.5x3.5 (FC) 
+Typical Application Circuit 
+LX
+VIN
+RT6755
+C26
+10μF
+L4
+10μH
+C27
+10μF
+C13
+470pF
+PAVDD
+VIN
+LXB1
+VCORE
+LXB2
+VIO
+VCOM VCOM
+AGNDVINN
+LXI
+NAVDD
+COMP
+SDA
+SCL
+RESET
+SDA
+SCL
+RESET
+LDO VLDO
+C35
+4.7μF
+R14
+10
+C37
+4.7μF
+GND   (Exposed Pad)
+LXP
+LXN
+VGH
+VGL
+EXT_EN EXT_EN
+C10
+10μF
+VIN VINP
+GMA1
+GMA2
+C42
+1μF
+C41
+1μF
+NEG
+PGNDB
+PGND
+C40
+10μF
+VIN
+L5
+10μH
+R9
+4.7k
+VIN
+VIN
+GMA1
+GMA2
+R15
+4.7k
+R12
+4.7k
+R4
+4.7k
+R7
+75k
+C4~7
+10μF x 4
+VCORE
+L1
+4.7μH
+C16
+10μF
+VIO
+L2
+4.7μH
+C17
+10μF
+L3
+4.7μH
+VGH
+VGL
+C20
+2.2μF
+C24
+2.2μF
+C23
+2.2μF
+C21
+2.2μF
+NAVDD
+C44~47
+10μF x 4
+PAVDD
+C29~33
+10μF x 4
+ 
+Figure 1. General Application Circuit 
+ 
+
+=== PAGE 3 ===
+  Preliminary RT6755 
+Copyright © 2021 Richtek Technology Corporation. All rights reserved.                  is a registered trademark of Richtek Technology Corporation. 
+DS6755-P03   December  2021   www.richtek.com 
+3 
+ 
+Table 1. Component List of Evaluation Board 
+Components Part Number Description Package Supplier 
+C35, C37 C1608X5R0J475K080AB 4.7uF/6.3V/X5R/0603 1.6mmx0.8mmx0.8mm TDK 
+C4~C7,C10,C16, 
+C17,C26,C27, C40 GRM188R60J106ME47 10uF/6.3V/X5R/0603 1.6mmx0.8mmx0.8mm MURATA 
+C41, C42 GRM155R61A105ME15J 1uF/10V/X5R/0402 1.0mmx0.5mmx0.5mm MURATA 
+C44~C47, C29~C33 GRM188R61C106KAAL 10uF/16V/X5R/0603 1.6mmx0.8mmx0.8mm MURATA 
+C20, C21 GRM155R61E225KE11 2.2uF/25V/X5R/0402 1.0mmx0.5mmx0.5mm MURATA 
+C23, C24 GRM188R61H225KE11 2.2uF/50V/X5R/0603 1.6mmx0.8mmx0.8mm MURATA 
+L4, L5 HBMQ061T100MST 10uH 6.4mmx6.4mmx1.0mm CYNTEC 
+L1, L2, L3 HTTH25201T4R7MSR 4.7uH 2.5mmx2.0mmx1.0mm CYNTEC 
+ 
+LX
+C26
+10μF
+C56
+4.7μF
+PAVDD
+VIN
+LXB1
+VCORE
+LXB2
+VIO
+VCOM VCOM
+AGNDVINN
+LXI
+NAVDD
+COMP
+SDA
+SCL
+RESET
+SDA
+SCL
+RESET
+LDO VLDO
+C35
+4.7μF
+R15
+4.7k R12
+4.7k
+R4
+4.7k
+R14
+10
+GND   (Exposed Pad)
+LXP
+LXN
+VGH
+VGL
+EXT_EN
+C10
+10μF
+VIN VINP
+GMA1
+GMA2
+NEG
+PGNDB
+PGND
+R9
+4.7k
+VIN
+VIN
+Connect to 
+PAVDD pin
+C40
+10μF
+VIN
+L5
+10uH
+RT9742
+Isolation
+GD
+VIN
+EN
+GND
+FLG
+VOUT
+C48
+10μF
+VIN
+R16
+4.7k
+FLG
+RT9297
+Single
+ Boost
+COMP
+FB
+EN
+GND
+SS
+FREQ
+VDD
+LX
+GND LX
+C52
+10vF
+C51
+0.1μF
+C49
+10μF
+L6
+10μH
+VFB
+VOUT
+VOUT
+C53~55
+4.7μF x 3
+RFB1
+RFB2
+VFB
+R17
+56k
+C50
+330pF
+D1
+From Ext. Boost
+C4~7
+10μF x 4
+VCORE
+L1
+4.7μH
+C16
+10μF
+VIO
+L2
+4.7μH
+C17
+10μF
+RT6755
+L4
+4.7μH
+VGH
+VGL
+C20
+2.2μF
+C24
+2.2μF
+C23
+2.2μF
+C21
+2.2μF
+NAVDD
+C44~47
+10μF x 4
+C42
+1μF
+C41
+1μF
+C37
+4.7μF
+VIN
+VIN
+VGMA1
+VGMA2
+Figure 2. The Application Circuit of Using External PAVDD 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+
+=== PAGE 4 ===
+RT6755 Preliminary  
+Copyright © 2021 Richtek Technology Corporation. All rights reserved.                  is a registered trademark of Richtek Technology Corporation.  
+www.richtek.com  DS6755-P03   December  2021  
+4 
+ 
+L1
+LX
+VIN
+C26
+10μF
+10μH
+R7
+75k
+C27
+10μF
+C13
+470pF
+PAVDD
+VIN
+LXB1
+VCORE
+LXB2
+VIO
+VCOM VCOM
+AGNDVINN
+LXI
+NAVDDFrom Ext. 
+Inverting C53
+22μF
+COMP
+SDA
+SCL
+RESET
+SDA
+SCL
+RESET
+LDO VLDO
+C35
+4.7μF
+R15
+4.7k R12
+4.7k
+R4
+4.7k
+R14
+10
+4.7μF
+GND   (Exposed Pad)
+LXP
+LXN
+VGH
+VGL
+EXT_EN
+C10
+10μF
+VIN VINP
+GMA1
+GMA2
+C37
+NEG
+PGNDB
+PGND
+VIN
+R9
+4.7k
+VIN
+VIN
+RT8299
+Single
+ BUCK
+(Inverting)
+VIN
+EN
+VCC
+GND
+BOOT
+SW
+FB
+PGOOD
+C48, 49
+10μF x 2
+NAVDD
+C50
+1μF
+Connect to 
+NAVDD pin
+C51
+0.1μF
+RFB1
+RFB2
+C52
+22μF
+L6
+2.2μH
+C40
+1μF
+C4~7
+10μF x 4
+VCORE
+L2
+4.7μH
+C16
+10μF
+VIO
+L3
+4.7μH
+C17
+10μF
+L4
+4.7μH
+VGH
+VGL
+C20
+2.2μF
+C24
+2.2μF
+C23
+2.2μF
+C21
+2.2μF
+PAVDD
+C29~33
+10μF x 4
+C41
+1μF
+C42
+1μF
+RT6755
+VIN
+Figure 3. The Application Circuit of Using External NAVDD 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+
+=== PAGE 5 ===
+  Preliminary RT6755 
+Copyright © 2021 Richtek Technology Corporation. All rights reserved.                  is a registered trademark of Richtek Technology Corporation. 
+DS6755-P03   December  2021   www.richtek.com 
+5 
+ 
+L4
+LX
+VIN
+C26
+10μF
+10μH
+R7
+75k
+C27
+10μF
+C13
+470pF
+PAVDD
+VIN
+LXB1
+VCORE
+LXB2
+VIO
+VCOM VCOM
+AGNDVINN
+LXI
+NAVDD
+COMP
+SDA
+SCL
+RESET
+SDA
+SCL
+RESET
+LDO VLDO
+C35
+4.7μF
+R15
+4.7k R12
+4.7k
+R4
+4.7k
+R14
+10
+4.7μF
+GND   (Exposed Pad)
+LXP
+LXN
+VGH
+VGL
+EXT_EN
+C10
+10μF
+VIN VINP
+GMA1
+GMA2
+C37
+NEG
+PGNDB
+PGND
+R9
+4.7k
+VIN
+VIN
+C48, 49
+10uF x 2 VFB
+RFB1
+RFB2
+C51, 52
+10μF x 2
+L6
+10μH
+C16
+10μF
+VIO
+L2
+4.7μH
+C17
+10μF
+L3
+4.7μH
+VGH
+VGL
+C20
+2.2μF
+C24
+2.2μF
+C23
+2.2μF
+C21
+2.2μF
+PAVDD
+C29~33
+10μF x 4
+C41
+1μF
+C42
+1μF
+RT6755
+C40
+10μF
+VIN
+L5
+10μH
+NAVDD
+C44~47
+10μF x 4
+RT5710
+Single
+ BUCK
+EN
+VIN
+FB
+GND
+LXVIN VCOREC50
+22pF
+VFB
+ 
+Figure 4. The Application Circuit of Using External VCORE 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+  
+
+=== PAGE 6 ===
+RT6755 Preliminary  
+Copyright © 2021 Richtek Technology Corporation. All rights reserved.                  is a registered trademark of Richtek Technology Corporation.  
+www.richtek.com  DS6755-P03   December  2021  
+6 
+ 
+Timing Diagram 
+20%
+TDIS ≤ 
+6ms(04h[5]=1)
+VIN
+UVLO_
+F
+VCORE
+PAVDD
+LDO
+NAVDD
+VCOM
+VIO
+VCORE 
+SST
+VIO 
+SST
+PAVDD 
+SST
+NAVDD 
+SST
+VGH
+VGH 
+SST
+LDO 
+DLY 
+VCORE 
+DLY
+VIO 
+DLY
+PAVDD 
+DLY
+VGH DLY
+NAVDD 
+DLY
+RESET
+VIN < 
+VRESET
+VGL
+VGL 
+DLY
+VGL 
+SST
+VCOM 
+DLY
+GMA1
+GMA2
+RESET off 
+Control(1Bh[5:4])
+UVLO_
+R
+RESET 
+DLY
+½*NAVDD 
+SST
+½*PAVDD 
+SST
+20%
+TDIS ≤ 
+6ms(04h[6]=1)
+20%
+TDIS ≤ 
+6ms(04h[4]=1)
+20%
+TDIS ≤ 5ms(04h[0]=1)
+20%TDIS ≤ 
+30ms
+20%
+TDIS ≤ 
+5ms(04h[1]=1)
+TDIS ≤ 10ms(04h[3]=1)
+TDIS < 0.3ms(04h[7]=1)
+ 
+Figure 5. Timing Diagram 
+ 
+Note 1. VGH / VGL DLY ≥ (PAVDD DLY + PAVDD SST) when SIBO power source come from PAVDD. 
+Note 2. VCOM DLY ≥ (PAVDD DLY + PAVDD SST) & (NAVDD DLY + NAVDD SST). 
+Note 3. (VGL DLY + SST) ≤ VGH DLY or (VGH DLY + SST) ≤ VGL DLY , the soft-start of VGH and VGL can not occur  at the 
+same time due to the limitation of SIBO topology. 
+Note 4. When PAVDD use external converter to supplied, the PAVDD SST setting ≥ the external PAVDD soft-start time to make 
+GMA1 normal operation. 
+Note 5. When NAVDD use external converter to supplied, the NAVDD SST setting ≥ the external NAVDD soft-start time to make 
+GMA2 normal operation. 
+Note 6. The power-on sequence setting and channel on/off can’t be changed during the power-on sequence. 
+Note 7. Before the channels soft-start finish, the output should not be added load for preventing the power-up unsuccessfully. 
+Note 8. The resistance between power supply and VIN pin of the RT6755 chip should be smaller than 0.5 ohm to prevent the 
+power-on un-successfully. 
+ 
+ 
+
+=== PAGE 7 ===
+  Preliminary RT6755 
+Copyright © 2021 Richtek Technology Corporation. All rights reserved.                  is a registered trademark of Richtek Technology Corporation. 
+DS6755-P03   December  2021   www.richtek.com 
+7 
+ 
+Functional Pin Description 
+Pin No. Pin Name Pin Function 
+1 VCORE VCORE buck converter output. 
+2 PGNDB Power ground 
+3 LXB1 Switching node of VCORE buck converter. 
+4 VIN Power supply input of IC 
+5 LXB2 Switching node of VIO buck converter. 
+6 VIO VIO buck converter output. 
+7 LDO LDO output. 
+8 NEG Inverting input of VCOM-OP 
+9 GMA2 Negative GMA2 OP output 
+10 VCOM VCOM Op-Amp output. 
+11 GMA1 Positive GMA1 OP output 
+12 NAVDD NAVDD buck-boost converter output. 
+13 LXI Switching node of NAVDD buck-boost converter. 
+14 VINN Power supply input of NAVDD buck-boost converter 
+15 PAVDD PAVDD boost converter output. 
+16 LX Switching node of PAVDD boost converter. 
+17 PGND Power ground of PAVDD boost converter. 
+18 LXP Switching node of VGH SIBO converter. 
+19 VGH VGH SIBO converter output. 
+20 AGND Analog ground. 
+21 VGL VGL SIBO converter output. 
+22 LXN Switching node of VGL SIBO converter. 
+23 VINP Power supply input of SIBO converter 
+24 RESET Output of VIN voltage detection function 
+25 COMP Compensation pin of PAVDD boost converter 
+26 EXT EN An external enable signal of external PAVDD, NAVDD or VCORE. 
+27 SCL Serial clock line of I2C 
+28 SDA Serial data line of I2C 
+ 
+ 
+ 
+ 
+ 
+ 
+  
+
+=== PAGE 8 ===
+RT6755 Preliminary  
+Copyright © 2021 Richtek Technology Corporation. All rights reserved.                  is a registered trademark of Richtek Technology Corporation.  
+www.richtek.com  DS6755-P03   December  2021  
+8 
+ 
+Functional Block Diagram 
+VCORE
+Buck
+Controller
+VCORE
+PGNDB
+LXB1
+PAVDD
+PAVDD
+Sync.
+Boost
+Controller
+COMP
+VINP
+VCOM
+NAVDD
+NAVDD
+PGNDLDO
+Regulator
+LDO
+VIN
+I2C Interface
+SDA
+SCL
+DAC
+MTP
+Sequence
+Control
+AGND
+RESET
+RESET
+VIN
+LXN
+LXP
+VGL
+VGH
+& VGL
+Controller
+(SIBO)
+VGH
+VIN
+VIO
+Buck
+Controller
+LXB2
+VIN
+VIO
+NC
+LX
+GMA1
+GMA2DAC
+DAC
+NEG
+VIN
+PAVDD
+NAVDD
+NAVDD
+Sync.
+Inverting
+Controller
+VINN
+LXI
+ 
+ 
+
+=== PAGE 9 ===
+  Preliminary RT6755 
+Copyright © 2021 Richtek Technology Corporation. All rights reserved.                  is a registered trademark of Richtek Technology Corporation. 
+DS6755-P03   December  2021   www.richtek.com 
+9 
+ 
+Absolute Maximum Ratings   (Note 8) 
+ VIN, VINP, VINN, PAVDD, LX, GMA1 to GND------------------------------------------ −0.3V to 10V 
+ RESET, SDA, SCL, EXT_EN, COMP to GND ------------------------------------------ −0.3V to 7V 
+ LDO, VCORE, VIO, LXB1, LXB2 to GND ------------------------------------------------ −0.3V to 7V 
+ LXP, VGH to GND ----------------------------------------------------------------------------- −0.3V to 32V 
+ LXN to GND ------------------------------------------------------------------------------------- (VGL + 0.3) to (VINP − 0.3V) 
+ VGL to GND ------------------------------------------------------------------------------------- −20V to 0.3V 
+ GMA2, NAVDD to GND  --------------------------------------------------------------------- −10V to 0.3V 
+ LXI to GND --------------------------------------------------------------------------------------- (NAVDD + 0.3V) to (VINN − 0.3V) 
+ NEG to GND ------------------------------------------------------------------------------------- −8V to 8V 
+ VCOM to GND ---------------------------------------------------------------------------------- (NAVDD + 0.3V) to (VIN − 0.3V) 
+ PGND, AGND to PGND ---------------------------------------------------------------------- −0.3V to 0.3V 
+ Power Dissipation, PD @ TA = 25°C   
+UQFN-28TL 3.5x3.5 (FC) -------------------------------------------------------------------- 3.2W 
+ Package Thermal Resistance   (Note 9)  
+UQFN-28TL 3.5x3.5 (FC), θJA  ------------------------------------------------------------- 31.2°C/W 
+UQFN-28TL 3.5x3.5 (FC), θJC  ------------------------------------------------------------- 2.2°C/W 
+ Storage Temperature Range ---------------------------------------------------------------- −65°C to 150°C 
+ Lead Temperature (Soldering, 10 sec.) --------------------------------------------------- 260°C 
+ ESD Susceptibility   (Note 10) 
+HBM (Human Body Mode)  -----------------------------------------------------------------  2kV 
+Recommended Operating Conditions   (Note 11) 
+ Supply Input Voltage, VIN ----------------------------------------------------------------------  2.5V to 5V 
+ Ambient Temperature Range -----------------------------------------------------------------  −40°C to 85°C 
+ Junction Temperature Range -----------------------------------------------------------------  −40°C to 125°C 
+  
+
+=== PAGE 10 ===
+RT6755 Preliminary  
+Copyright © 2021 Richtek Technology Corporation. All rights reserved.                  is a registered trademark of Richtek Technology Corporation.  
+www.richtek.com  DS6755-P03   December  2021  
+10 
+ 
+Electrical Characteristics 
+(VIN = 3.3V, PAVDD = 6V, NAVDD = − 6V, VGH = 18V, VGL = − 14V, VCORE = 1.1V, VIO = 1.8V, VCOM = − 1V, TA = 25°C, 
+unless otherwise specified)  
+Parameter Symbol Test Conditions Min Typ Max Unit 
+General 
+VIN Supply Range VIN   2.5 -- 5 V 
+VIN OVP Threshold VIN_OVP   -- 6.8 -- V 
+VIN 
+Under-voltage-lockout 
+Falling 
+VIN_UVLO_F VIN falling, turn-off IC -- 1.87 -- V 
+VIN 
+Under-voltage-lockout 
+Hysteresis 
+VIN_UVLO_HYS Hys = 
+VIN_UVLO_R-VIN_UVLO_F -- 0.4 -- V 
+VIN Quiescent Current 
+IVIN_NSW LX not switching for all channel -- 1.6 -- mA 
+IVIN_SW LX switching for all channel -- 2.4 -- mA 
+Thermal Shutdown 
+TSD Temperature rising -- 160 -- °C 
+TSD_HYS Hysteresis -- 25 -- °C 
+I2C Protocol 
+High-Level Input 
+Voltage I2C_VIH SCL, SDA 1.0 -- -- V 
+Low-Level Input 
+Voltage I2C_VIL SCL, SDA -- -- 0.4 V 
+SCL Clock Frequency I2C_FCLK   10 400 1000 kHz 
+Repeat Start Condition 
+Setup Time I2C_TSU_STA   260 -- 600 ns 
+Start Condition Hold 
+Time I2C_THD_STA   260 -- 600 ns 
+Stop Condition Setup 
+Time I2C_TSU_STO   260 -- 600 ns 
+Bus Free Time 
+Between Stop to Start I2C_TBUF   500 -- 600 ns 
+Low Period of the SCL 
+Clock I2C_TLOW   500 -- 600 ns 
+High Period of the SCL 
+Clock I2C_THIGH   260 -- 600 ns 
+Data Set-up Time I2C_TSU_DAT   50 -- 570 ns 
+Data Hold Time I2C_THD_DAT   0 -- 570 ns 
+Timeout I2C_TOUT   -- 50 -- ms 
+PAVDD Boost Converter 
+Output Voltage Range VPAVDD VPAVDD = 05h[5:0] = 0x00 to 
+0x3C 4.0 -- 7.0 V 
+Min. Output Voltage VPAVDD_MIN 
+VPAVDD = 05h[5:0] = 0x00 to 
+0x0F VIN + 0.3 -- -- 
+V VPAVDD = 05h[5:0] = 0x10 to 
+0x3C VIN + 1.5 -- -- 
+Default Output Voltage VPAVDD_6V VPAVDD = 05h[5:0] = 0x28 = 6V 5.94 6 6.06 V 
+Output Accuracy VPAVDD_ACC VPAVDD = 4V to 7V −1 -- 1 % 
+
+=== PAGE 11 ===
+  Preliminary RT6755 
+Copyright © 2021 Richtek Technology Corporation. All rights reserved.                  is a registered trademark of Richtek Technology Corporation. 
+DS6755-P03   December  2021   www.richtek.com 
+11 
+ 
+Parameter Symbol Test Conditions Min Typ Max Unit 
+Switch Frequency 
+Range PAVDD_FSW 
+PAVDD_FSW = 10h[2:0] = 
+0x00 to 0x05 = 600k / 715k / 
+800k / 900k / 1000k / 1200k 
+600 -- 1200 kHz 
+Default Setting 
+Switching Frequency 
+PAVDD_FSW_1
+200k 
+PAVDD_FSW = 10h[2:0 ]= 
+0x05 = 1200k 1080 1200 1320 kHz 
+Switch Frequency 
+Accuracy 
+PAVDD_FSW_A
+CC_715k 
+PAVDD_FSW = 10h[2:0] = 
+0x01 = 715k −5 -- 5 % 
+PAVDD_FSW_A
+CC 
+PAVDD_FSW = 600k / 800k / 
+900k / 1000k / 1200k −10 -- 10 % 
+Maximum Duty PAVDD_DMAX   -- 90 -- % 
+Minimum On Time 
+PAVDD_MOT_4
+.8V PAVDD ≥ 4.8V -- 220 -- ns 
+PAVDD_MOT_4
+.75V PAVDD < 4.8V -- 70 -- ns 
+Maximum Output 
+Current Capability IPAVDD_MAX VIN = 3V, PAVDD = 7V 400 -- -- mA 
+Line Regulation PAVDD_LIR VIN = 2.5V to 5V −0.3 -- 0.3 %/V 
+Load Regulation PAVDD_LOR VIN = 3.3V, IPAVDD = 10mA to 
+400mA -- 75 -- mV/A 
+High-Side MOSFET 
+On-Resistance 
+PAVDD_RON_H
+S IPAVDD = 100mA -- 150 -- mΩ 
+Low-Side MOSFET 
+On-Resistance 
+PAVDD_RON_L
+S IPAVDD = 100mA -- 85 -- mΩ 
+LX Leakage Current PAVDD_LX_ILK VLX = 6V -- -- 1 µA 
+Current Limit Peak 
+Range 
+PAVDD_ILIM_P
+EAK 
+PAVDD_ILIM_PEAK = 
+10h[6:5] = 0x00 to 0x03 = 1A / 
+1.5A / 2A / 2.5A 
+1 -- 2.5 A 
+Default Current Limit 
+Peak Accuracy 
+PAVDD_ILIM_P
+EAK_ACC VIN = 2.8V to 5V. -- 1.5 -- A 
+Negative Current Limit 
+Peak 
+PAVDD_ILIM_N
+EG_PEAK   -- 1 -- A 
+Under Voltage 
+Protection Threshold PAVDD_UVP  -- 80 -- % 
+Under Voltage 
+Protection Delay Time 
+PAVDD_UVP_D
+LY   -- 60 -- ms 
+Short Circuit 
+Protection Threshold PAVDD_SCP  -- 1.25 -- V 
+Short Circuit 
+Protection Hysteresis 
+PAVDD_SCP_H
+YS   -- 92 -- mV 
+Over Voltage 
+Protection Threshold PAVDD_OVP PAVDD rising -- 7.5 -- V 
+Power on/off 
+Discharge Ron PAVDD_RDIS Before PAVDD soft-start and 
+After UVLO should be turn on. -- 42 -- Ω 
+Power off Discharge 
+Time PAVDD_DIST 
+Discharge function enable, 
+COUT = 40uF, Time = 100% to 
+20% 
+-- 5 -- ms 
+Power-on Soft-start 
+Time Range PAVDD_SST PAVDD_SST = 11h[6:4] = 
+0x00 to 0x07 2 -- 16 ms 
+Default Power-on 
+Soft-start Time 
+PAVDD_SST_4
+MS 
+PAVDD_SST = 11h[6:4] = 
+0x01 3.6 4 4.4 ms 
+Power on Delay Time 
+Range PAVDD_DLY PAVDD_DLY = 11h[3:0] = 
+0x00 to 0x0F 0 -- 45 ms 
+
+=== PAGE 12 ===
+RT6755 Preliminary  
+Copyright © 2021 Richtek Technology Corporation. All rights reserved.                  is a registered trademark of Richtek Technology Corporation.  
+www.richtek.com  DS6755-P03   December  2021  
+12 
+ 
+Parameter Symbol Test Conditions Min Typ Max Unit 
+Default Power on 
+Delay Time 
+PAVDD_DLY_1
+0MS 
+PAVDD_DLY = 11h[3:0] = 
+0x02 9 10 11 ms 
+Pre-charge Current PAVDD_IPC COUT = 40uF -- 350 -- mA 
+VCORE Buck Converter 
+Output Voltage Range VCORE VCORE = 09h[5:0] = 
+0x00~0x3C 
+0.8 
+0.2*VIN -- 2.0 V 
+Default Output Voltage VCORE_1.1V VCORE = 09h[5:0] = 0x0F 1.089 1.1 1.111 V 
+Output Accuracy VCORE_ACC VCORE = 0.8V to 2V −1 -- 1 % 
+Switch Frequency 
+Range VCORE_FSW 
+VCORE_FSW = 17h[2:0] = 
+0x00 to 0x05 = 600k / 715k / 
+800k / 900k / 1000k / 1200k 
+600 -- 1200 kHz 
+Default Setting 
+Switching Frequency 
+VCORE_FSW_1
+200k 
+VCORE_FSW = 17h[2:0] = 
+0x05 = 1200k 1080 1200 1320 kHz 
+Switch Frequency 
+Accuracy 
+VCORE_FSW_A
+CC_715k 
+VCORE_FSW = 17h[2:0] = 
+0x01 = 715k −5 -- 5 % 
+VCORE_FSW_A
+CC 
+VCORE_FSW = 600k / 800k / 
+900k / 1000k / 1200k −10 -- 10 % 
+Maximum Duty VCORE_DMAX   -- 100 -- % 
+Minimum On Time VCORE_MOT VCORE≥VIN - 4.2V -- 130 -- ns 
+Maximum Output 
+Current Capability ICORE_MAX VIN = 3.3V, VCORE = 1.2V 700 -- -- mA 
+Line Regulation VCORE_LIR VIN = 2.5V to 5V −0.3 -- 0.3 %/V 
+Load Regulation VCORE_LOR VIN = 3.3V, ICORE = 10 to 
+800mA -- 50 -- mV/A 
+High-Side MOSFET 
+On-Resistance 
+VCORE_RON_
+HS ICORE = 100mA -- 135 -- mΩ 
+Low-Side MOSFET 
+On-Resistance 
+VCORE_RON_L
+S ICORE = 100mA -- 100 -- mΩ 
+LXB1 Leakage Current VCORE_LXB1_I
+LK VLXB1 = 0V -- -- 1 µA 
+Current Limit Peak VCORE_ILIM_P
+EAK_ACC VIN = 2.8V to 5V -- 1.5 -- A 
+Negative Current Limit 
+Peak 
+VCORE_ILIM_N
+EG   350 -- -- mA 
+Under Voltage 
+Protection Threshold VCORE_UVP  -- 80 -- % 
+Under Voltage 
+Protection Delay Time 
+VCORE_UVP_D
+LY   -- 60 -- ms 
+Short Circuit 
+Protection Threshold VCORE_SCP   -- 20 -- % 
+Power off Discharge 
+Ron VCORE_RDIS 
+Before VCORE soft-start and 
+After UVLO_F should be turn 
+on. 
+-- 50 -- Ω 
+Power off Discharge 
+Time VCORE_DIST 
+Discharge function enable, 
+COUT =  40uF, Time = 100% 
+to 20% 
+-- 6 -- ms 
+Power-on Soft-start 
+Time Range VCORE_SST VCORE_SST = 18h[5:4] = 
+0x00 to 0x03 2 -- 8 ms 
+Default Power-on 
+Soft-start Time 
+VCORE_SST_4
+MS 
+VCORE_SST = 18h[5:4] = 
+0x01 3.6 4 4.4 ms 
+Power-on Delay Time 
+Range VCORE_DLY VCORE_DLY = 18h[3:0] = 
+0x00 to 0x0F 0 -- 45 ms 
+
+=== PAGE 13 ===
+  Preliminary RT6755 
+Copyright © 2021 Richtek Technology Corporation. All rights reserved.                  is a registered trademark of Richtek Technology Corporation. 
+DS6755-P03   December  2021   www.richtek.com 
+13 
+ 
+Parameter Symbol Test Conditions Min Typ Max Unit 
+Default Power-on 
+Delay Time 
+VCORE_DLY_5
+MS 
+VCORE_DLY = 18h[3:0] = 
+0x01 4.5 5 5.5 ms 
+VIO Buck Converter 
+Output Voltage Range VIO VIO = 0Ah[4:0] = 0x00~0x1E 1.0 -- 2.5 V 
+Default Output Voltage VIO_1.8V VIO = 09h[5:0] = 0x10 1.782 1.8 1.818 V 
+Output Accuracy VIO_ACC VIO = 1V to 2.5V −1 -- 1 % 
+Switch Frequency 
+Range VIO_FSW 
+VIO_FSW = 19h[2:0] = 0x00 to 
+0x05 = 600k / 715k / 800k / 
+900k / 1000k / 1200k 
+600 -- 1200 kHz 
+Default Setting 
+Switching Frequency 
+VIO_FSW_1200
+k 
+VIO_FSW = 19h[2:0] = 0x05 = 
+1200k 1080 1200 1320 kHz 
+Switch Frequency 
+Accuracy 
+VIO_FSW_ACC
+_715k 
+VIO_FSW = 19h[2:0] = 0x01 = 
+715k −5 -- 5 % 
+VIO_FSW_ACC VIO_FSW = 600k / 800k / 900k 
+/ 1000k / 1200k −10 -- 10 % 
+Maximum Duty VIO_DMAX   -- 100 -- % 
+Minimum On Time VIO_MOT   -- 160 -- ns 
+Maximum Output 
+Current Capability IIO_MAX VIN = 3.3V, VIO = 1.8V 400 -- -- mA 
+Line Regulation VIO_LIR VIN = 2.5V to 5V −0.3 -- 0.3 %/V 
+Load Regulation VIO_LOR VIN = 3.3V, IIO = 10~400mA -- 50 -- mV/A 
+High-Side MOSFET 
+On-Resistance VIO_RON_HS IIO = 100mA -- 175 -- mΩ 
+Low-Side MOSFET 
+On-Resistance VIO_RON_LS IIO = 100mA -- 200 -- mΩ 
+LXB2 Leakage Current VIO_LXB2_ILK VLXB2 = 0V -- -- 1 µA 
+Current Limit Peak VIO_ILIM_PEAK
+_ACC VIN = 2.8V to 5V -- 1.2 -- A 
+Negative Current Limit 
+Peak VIO_ILIM_NEG   360 -- -- mA 
+Under Voltage 
+Protection Threshold VIO_UVP  -- 80 -- % 
+Under Voltage 
+Protection Delay Time VIO_UVP_DLY   -- 60 -- ms 
+Short Circuit 
+Protection Threshold VIO_SCP   -- 20 -- % 
+Power off Discharge 
+Ron VIO_RDIS Before VIO soft-start and After 
+UVLO_F should be turn on. -- 100 -- Ω 
+Power off Discharge 
+Time VIO_DIST 
+Discharge function enable, 
+COUT = 40uF, Time = 100% to 
+20% 
+-- 6 -- ms 
+Power-on Soft-start 
+Time Range VIO_SST VIO_SST = 1Ah[5:4] = 0x00 to 
+0x03 2 -- 8 ms 
+Default Power-on 
+Soft-start Time VIO_SST_4MS VIO_SST = 1Ah[5:4] = 0x01 3.6 4 4.4 ms 
+Power-on Delay Time 
+Range VIO_DLY VIO_DLY = 1Ah[3:0] = 0x00 to 
+0x0F 0 -- 45 ms 
+
+=== PAGE 14 ===
+RT6755 Preliminary  
+Copyright © 2021 Richtek Technology Corporation. All rights reserved.                  is a registered trademark of Richtek Technology Corporation.  
+www.richtek.com  DS6755-P03   December  2021  
+14 
+ 
+Parameter Symbol Test Conditions Min Typ Max Unit 
+Default Power-on 
+Delay Time VIO_DLY_10MS VIO_DLY = 1Ah[3:0] = 0x02 9 10 11 ms 
+LDO Regulator 
+Output Voltage Range VLDO VLDO = 0Bh[3:0] = 0x00~0x0C 1.8 -- 3 V 
+Default Output Voltage VLDO_2.5V VLDO = 0Bh[3:0] = 0x07 2.475 2.5 2.525 V 
+Output Accuracy VLDO_ACC TA = 25°C, VLDO = 1.8V to 3V −1 -- 1 % 
+Dropout Voltage LDO_DROP VIN = 2.8V, VLDO = 2.8V, 
+ILDO = 100mA -- 0.2 -- V 
+Current Limit LDO_ILIM VIN = 3.3V, VLDO = 2.5V -- 0.28 -- A 
+Maximum Output 
+Current Capability ILDO_MAX VIN = 3.3V, VLDO = 2.5V 100 -- -- mA 
+Line Regulation LDO_LIR VIN = 2.5V~5V −1 -- 1 % 
+Load Regulation LDO_LOR VIN = 3.3V, VLDO = 2.5V, 
+1mA < ILDO < 100mA −1 -- 1 % 
+Under Voltage 
+Protection Threshold LDO_UVP   -- 60 -- % 
+Under Voltage 
+Protection Delay Time LDO_UVP_DLY   -- 60 -- ms 
+Power off Discharge 
+Ron LDO_RDIS Before LDO soft-start and After 
+UVLO_F should be turn on. -- 200 -- Ω 
+Power off Discharge 
+Time LDO_DIST 
+Discharge Function enable, 
+COUT = 4.7uF, Time = 
+100%~20% 
+-- 6 -- ms 
+Power-on Delay Time 
+Range LDO_DLY LDO_DLY = 0Bh[7:4] = 0x00 to 
+0x0F 0 -- 45 ms 
+Default Power-on 
+Delay Time 
+LDO_DLY_10M
+S LDO_DLY = 0Bh[7:4] = 0x02 9 10 11 ms 
+NAVDD Inverting Converter 
+Output Voltage Range VNAVDD VNAVDD = 06h[5:0] = 
+0x00~0x1E −4 -- −7 V 
+Default Output Voltage VNAVDD_-6V VNAVDD = 06h[5:0] = 0x14 = 
+-6V −6.06 −6 −5.94 V 
+Output Accuracy VNAVDD_ACC VNAVDD = -4V to -7V −1 -- 1 % 
+Switch Frequency 
+Range NAVDD_FSW 
+NAVDD_FSW = 13h[2:0] = 
+0x00 to 0x05 = 600k / 715k / 
+800k / 900k / 1000k / 1200k 
+600 -- 1200 kHz 
+Default Setting 
+Switching Frequency 
+NAVDD_FSW_1
+200k 
+NAVDD_FSW = 13h[2:0] = 
+0x05 = 1200k 1080 1200 1320 kHz 
+Switch Frequency 
+Accuracy 
+NAVDD_FSW_A
+CC_715k 
+NAVDD_FSW = 13h[2:0] = 
+0x01 = 715k −5 -- 5 % 
+NAVDD_FSW_A
+CC 
+NAVDD_FSW = 600k / 800k / 
+900k / 1000k / 1200k −10 -- 10 % 
+Maximum Duty NAVDD_DMAX   -- 90 -- % 
+Minimum On Time NAVDD_MOT   -- 350 -- ns 
+Maximum Output 
+Current Capability INAVDD_MAX VIN = 3V, NAVDD = 7V 400 -- -- mA 
+Line Regulation NAVDD_LIR VIN = 2.5V to 5V −0.3 -- 0.3 %/V 
+
+=== PAGE 15 ===
+  Preliminary RT6755 
+Copyright © 2021 Richtek Technology Corporation. All rights reserved.                  is a registered trademark of Richtek Technology Corporation. 
+DS6755-P03   December  2021   www.richtek.com 
+15 
+ 
+Parameter Symbol Test Conditions Min Typ Max Unit 
+Load Regulation NAVDD_LOR VIN = 3.3V, INAVDD = 10mA to 
+400mA -- 80 -- mV/A 
+High-Side MOSFET 
+On-Resistance_Big 
+NAVDD_RON_H
+S_B INAVDD = 100mA -- 330 -- mΩ 
+Low-Side MOSFET 
+On-Resistance_Big 
+NAVDD_RON_L
+S_B INAVDD= 100mA -- 210 -- mΩ 
+High-Side MOSFET 
+On-Resistance_Small 
+NAVDD_RON_H
+S_S INAVDD = 100mA -- 150 -- mΩ 
+Low-Side MOSFET 
+On-Resistance_Small 
+NAVDD_RON_L
+S_S INAVDD = 100mA -- 60 -- mΩ 
+LXI Leakage Current NAVDD_LXI_IL
+K NAVDD = -6V, VLXIN = 3.3V -- -- 1 µA 
+Current Limit Peak 
+Range 
+NAVDD_ILIM_P
+EAK 
+NAVDD_ILIM_PEAK = 
+13h[6:5] = 0x00 to 0x03 = 1.5A 
+/ 2A / 2.5A / 3A 
+1.5 -- 3 A 
+Default Current Limit 
+Peak Accuracy 
+NAVDD_ILIM_P
+EAK_ACC 
+VIN = 2.8V to 5V, 
+NAVDD_ILIM_PEAK = 
+13h[6:5] = 0x02 = 2.5A 
+-- 1.5 -- A 
+Negative Current Limit 
+Peak 
+NAVDD_ILIM_N
+EG_PEAK   400 -- -- mA 
+Under Voltage 
+Protection Threshold NAVDD_UVP  -- 80 -- % 
+Under Voltage 
+Protection Delay Time 
+NAVDD_UVP_D
+LY Trigger base on UVP -- 60 -- ms 
+Short Circuit 
+Protection Threshold NAVDD_SCP  -- 20 -- % 
+Power on/off 
+Discharge Ron NAVDD_RDIS 
+Before NAVDD soft-start and 
+After UVLO_F should be turn 
+on. 
+-- 42 -- Ω 
+Power off Discharge 
+Time NAVDD_DIST 
+Discharge function enable, 
+COUT = 40uF, time = 100% to 
+20% 
+-- 5 -- ms 
+Power-on Soft-start 
+Time Range NAVDD_SST NAVDD_SST = 12h[6:4] = 
+0x00 to 0x07 2 -- 16 ms 
+Default Power-on 
+Soft-start Time 
+NAVDD_SST_4
+MS 
+NAVDD_SST = 12h[6:4] = 
+0x01 3.6 4 4.4 ms 
+Power on Delay Time 
+Range NAVDD_DLY NAVDD_DLY=12h[3:0] = 0x00 
+to 0x0F 0 -- 45 ms 
+Default Power on 
+Delay Time 
+NAVDD_DLY_1
+0MS NAVDD_DLY=12h[3:0] = 0x02 9 10 11 ms 
+VGH/VGL SIBO Converter 
+VGH Output Voltage 
+Range VGH 
+VGH High Resolution 03h[7] = 
+0, VGH = 07h[4:0] = 
+0x00~0x14 
+10 -- 30 V 
+VGH High Resolution 03h[7] = 
+1, VGH = 07h[4:0] = 
+0x00~0x14 
+6 -- 10 V 
+Default VGH Output 
+Voltage VGH_18V 
+VGH High Resolution 03h[7] = 
+0, VGH = 07h[4:0] = 0x08 = 
+18V 
+17.46 18 18.54 V 
+Default VGH Output 
+Voltage VGH_7.6V 
+VGH High Resolution 03h[7] = 
+1, VGH = 07h[4:0] = 0x08 = 
+7.6V 
+7.37 7.6 7.83 V 
+
+=== PAGE 16 ===
+RT6755 Preliminary  
+Copyright © 2021 Richtek Technology Corporation. All rights reserved.                  is a registered trademark of Richtek Technology Corporation.  
+www.richtek.com  DS6755-P03   December  2021  
+16 
+ 
+Parameter Symbol Test Conditions Min Typ Max Unit 
+VGH Output Accuracy VGH/L_ACC VGH=10~30V/6V to 10V −3 -- 3 % 
+VGL Output Voltage 
+Range VGL VGL = 08h[5:0] = 0x00~0x3F −5.4 -- -18 V 
+Default VGL Output 
+Voltage VGL_-14V VGL = 08h[5:0] = 0x00~0x2B = 
+-14V −14.42 −14 −13.58 V 
+VGL Output Accuracy VGH/L_ACC VGL = -5.4 to -18V −3 -- 3 % 
+Switch Frequency 
+Range VGH/L_FSW 
+VGH/L_FSW = 14h[2:0] = 
+0x00 to 0x05 = 600k / 715k / 
+800k / 900k / 1000k / 1200k 
+600 -- 1200 kHz 
+Default Setting 
+Switching Frequency 
+VGH/L_FSW_12
+00k 
+VGH/L_FSW = 14h[2:0] = 
+0x05 = 1200k 1080 1200 1320 kHz 
+Switch Frequency 
+Accuracy 
+VGH/L_FSW_A
+CC_715k 
+VGH/L_FSW = 14h[2:0] = 
+0x01 = 715k −5 -- 5 % 
+VGH/L_FSW_A
+CC 
+VGH/L_FSW = 600k / 800k / 
+900k / 1000k / 1200k −10 -- 10 % 
+Maximum Duty VGH/L_DMAX   -- 94 -- % 
+Maximum VGH/L 
+Output Current 
+Capability 
+IGH/L_MAX VIN = 3V, VGH = 18V, VGL = 
+-14V 20 -- -- mA 
+VGH/L Line Regulation VGH/L_LIR VIN = 2.5V to 5V −0.3 -- 0.3 %/V 
+VGH/L Load 
+Regulation VGH/L_LOR VIN = 3.3V, IVGH/L<20mA -- 0.8 -- mV/
+mA 
+VGL High-Side 
+MOSFET 
+On-Resistance 
+VGL_RON_HS IGH = 10mA -- 0.5 -- Ω 
+VGH Low-Side 
+MOSFET 
+On-Resistance 
+VGH_RON_LS IGL = 10mA -- 0.5 -- Ω 
+LXN Leakage Current VGH/L_LXN_ILK VGL = -14V, VIN = 3.3V -- -- 1 µA 
+LXP Leakage Current VGH/L_LXP_ILK VLXP = 18V -- -- 1 µA 
+Current Limit Peak VGH/L_ILIM_PE
+AK VIN = 2.8V to 5V. -- 1.2 -- A 
+VGH/L Under Voltage 
+Protection Threshold VGH/L_UVP  -- 80 -- % 
+VGH/L Under Voltage 
+Protection Delay Time 
+VGH/L_UVP_DL
+Y Trigger base on UVP -- 60 -- ms 
+VGH Short Circuit 
+Protection Threshold VGH_SCP  -- 1.3 -- V 
+VGL Short Circuit 
+Protection Threshold VGL_SCP  -- 20 -- % 
+VGH Power off 
+Discharge Ron VGH_RDIS 
+Before VGH soft-start and 
+After UVLO_F should be turn 
+on. 
+-- 2.273 -- kΩ 
+VGH Power off 
+Discharge Time VGH_TDIS 
+Discharge function enable, 
+COUT = 4.4uF, time = 
+100%~20% 
+-- 30  -- ms 
+VGH Power-on 
+Soft-start Time Range VGH_SST VGH_SST = 15h[5:4] = 0x00 to 
+0x07 4 -- 12 ms 
+VGH Default Power-on 
+Soft-start Time VGH_SST_6MS VGH_SST = 15h[5:4] = 0x01 5.4 6 6.6 ms 
+
+=== PAGE 17 ===
+  Preliminary RT6755 
+Copyright © 2021 Richtek Technology Corporation. All rights reserved.                  is a registered trademark of Richtek Technology Corporation. 
+DS6755-P03   December  2021   www.richtek.com 
+17 
+ 
+Parameter Symbol Test Conditions Min Typ Max Unit 
+VGH Power on Delay 
+Time Range VGH_DLY VGH_DLY = 15h[3:0] = 0x00 to 
+0x0F 0 -- 45 ms 
+VGH Default Power on 
+Delay Time 
+VGH_DLY_25M
+S VGH_DLY = 15h[3:0] = 0x05 22.5 25 27.5 ms 
+VGL Power off 
+Discharge Ron VGL_RDIS Before VGL soft-start and After 
+UVLO_F should be turn on. -- 0.75 -- kΩ 
+VGL Power off 
+Discharge Time VGL_TDIS 
+Discharge function enable, 
+COUT = 4.4uF, time = 100% to 
+20% 
+-- 10 -- ms 
+VGL Power-on 
+Soft-start Time Range VGL_SST VGL_SST = 16h[5:4] = 0x00 to 
+0x03 4 -- 12 ms 
+VGL Default Power-on 
+Soft-start Time VGL_SST_4MS VGL_SST = 16h[5:4] = 0x00 3.6 4 4.4 ms 
+VGL Power on Delay 
+Time Range VGL_DLY VGL_DLY = 16h[3:0] = 0x00 to 
+0x0F 0 -- 45 ms 
+VGL Default Power on 
+Delay Time 
+VGL_DLY_15M
+S VGL_DLY = 16h[3:0] = 0x03 13.5 15 16.5 V 
+VCOM Operation Amplifier 
+VCOM Output Voltage 
+Range VCOM VCOM = 0Ch[7:0] = 
+0x00~0xFF −2.56 -- 1.06 V 
+Default VCOM Output 
+Voltage VCOM_-1V VCOM = 0Ch[7:0] = 0x4E −1.04 −1 −0.96 V 
+Digital VCOM Output 
+Range DVCOM Slave = 0x9E, Data = 
+0x02~0xFF 
+VCOM − 
+10mV*64 -- VCOM + 
+10mV*64 V 
+Integral Non-Linearity VCOM_INL VCOM = -2.56V to 1.06V, No 
+Load, Unit Gain, TA = 25°C -- ±1 -- LSB 
+Differential 
+Non-Linearity VCOM_DNL VCOM = -2.56V to 1.06V, No 
+Load, Unit Gain, TA = 25°C -- ±0.5 -- LSB 
+Output Source/Sink 
+Current ICOM_SI/O ICOM = ±75mA, unit gain -- ±6 -- mV 
+Output Voltage Swing 
+High VCOM_VOH 
+ICOM = 100µA, VNEG = 
+NAVDD 
+VIN − 
+0.03 
+VIN − 
+0.005 -- V 
+ICOM = 75mA, VNEG = 
+NAVDD VIN − 1.9 VIN − 
+1.5 -- V 
+Output Voltage Swing 
+Low VCOM_VOL 
+ICOM = 100µA, VNEG = VIN -- NAVDD
++ 0.005 
+NAVDD
++ 0.03 V 
+ICOM=75mA, VNEG=VIN -- NAVDD
++ 1.5 
+NAVDD
++ 1.9 V 
+NEG leakage current     -- -- 0.1 µA 
+Output Short-Circuit 
+Current VCOM_ISC 
+Unit Gain, VCOM = -1V, 
+Source = VCOM short to 
+NAVDD/Sink = VCOM short to 
+VIN 
+-- ±285 -- mA 
+Power on/off Pull 
+Down Resistance VCOM_RPD   -- 130 -- Ω 
+Power off Discharge 
+Time VCOM_TDIS 
+COUT = 4.7uF, time = 100% to 
+20%, Discharge function 
+enable(Change Code) 
+-- 1 -- ms 
+Power on Delay Time 
+Range VCOM_DLY VCOM_DLY = 0Dh[7:3] = 0x00 
+to 0x1F 0 -- 155 ms 
+Default Power on 
+Delay Time 
+VCOM_DLY_25
+MS VCOM_DLY = 0Dh[7:3] = 0x05 22.5 25 27.5 ms 
+
+=== PAGE 18 ===
+RT6755 Preliminary  
+Copyright © 2021 Richtek Technology Corporation. All rights reserved.                  is a registered trademark of Richtek Technology Corporation.  
+www.richtek.com  DS6755-P03   December  2021  
+18 
+ 
+Parameter Symbol Test Conditions Min Typ Max Unit 
+GAM1/2 Operation Amplifier 
+GAM1 Output Voltage 
+Range VGAM1 VGAM1 = 0Eh[5:0] = 
+0x00~0x3F 
+PAVDD 
+− 1.26V -- PAVDD V 
+Default GAM1 Output 
+Voltage 
+VGAM1_PAVDD
+-0.2V VGAM1 = 0Eh[5:0] = 0x0A PAVDD 
+− 0.16 
+PAVDD
+− 0.2 
+PAVDD
+− 0.24 V 
+GAM2 Output Voltage 
+Range VGAM2 VGAM2 = 0Fh[5:0] = 
+0x00~0x3F NAVDD -- NAVDD
++ 1.26V V 
+Default GAM2 Output 
+Voltage 
+VGAM2_NAVDD
++0.2V VGAM2 = 0Fh[5:0] = 0x0A NAVDD + 
+0.24 
+NAVDD + 
+0.2 
+NAVDD 
++ 0.16 V 
+Integral Non-Linearity GAM1/2_INL  -- ±1 -- LSB 
+Differential 
+Non-Linearity GAM1/2_DNL  -- ±0.5 -- LSB 
+Maximum Output 
+Current Capability IGAM1/2_MAX   5 -- -- mA 
+Dropout Voltage GAM_DROP PAVDD = 6V, VGAM1 = 5.8V, 
+IGAM1/2 = 1mA -- 50 -- mV 
+Current Limit GAM_ILIM   -- 10 -- mA 
+Power on Delay Time 
+Range GAM1/2_DLY GAM1/2_DLY = 0Eh[7:6] = 
+0x00 to 0x03 5 -- 20 ms 
+Default Power on 
+Delay Time 
+GAM1/2_DLY_1
+0MS 
+GAM1/2_DLY = 0Eh[7:6] = 
+0x01 9 10 11 ms 
+GAM1 Output Voltage 
+Swing High GAM1_VOH IGAM1 = 1mA PAVDD 
+− 0.2 -- -- V 
+GAM2 Output Voltage 
+Swing Low GAM2_VOL IGAM2 = 1mA -- -- NAVDD
++ 0.2 V 
+RESET Input Voltage Detector 
+RESET Falling Voltage 
+Range VRESET RESET = 0Dh[2:0] = 
+0x00~0x05 2.0 -- 2.5 V 
+Default RESET Falling 
+Voltage VRESET_2.2V RESET = 0Dh[2:0] = 0x02 2.15 2.2 2.25 V 
+RESET Detect Voltage 
+Accuracy VRESET_ACC  −2 -- 2 % 
+RESET Rising 
+Hysteresis Voltage VRESET_HYS VIN > UVLO -- 0.15 -- V 
+RESET Open-Drain 
+On-Resistance RESET_RON Open-drain MOSFET is on, 
+Vup = floating -- 100 -- Ω 
+RESET Open-Drain 
+Leakage Current RESET_ILK Open-drain MOSFET is off, 
+Vup = 3.3V -- -- 1 µA 
+Power-on Delay Time 
+Range RESET_DLY RESET_DLY = 1Bh[3:0] = 
+0x00~0x0F 0 -- 75 ms 
+Default Power-on 
+Delay Time 
+RESET_DLY_15
+MS 
+RESET_DLY = 1Bh[3:0] = 
+0x03 13.5 15 16.5 ms 
+EXT_EN 
+EXT_EN Open-Drain 
+On-Resistance EXT_EN_RON Open-drain MOSFET is on, 
+Vup = floating -- 100 -- Ω 
+EXT_EN Open-Drain 
+Leakage Current EXT_EN_ILK Open-drain is off, Vup = 3.3V -- -- 1 µA 
+
+=== PAGE 19 ===
+  Preliminary RT6755 
+Copyright © 2021 Richtek Technology Corporation. All rights reserved.                  is a registered trademark of Richtek Technology Corporation. 
+DS6755-P03   December  2021   www.richtek.com 
+19 
+ 
+Note 9. Stresses beyond those listed under “Absolute Maximum Ratings” may cause permanent damage to the device. These 
+are stress ratings only, and functional operation of the device at these or any other conditions beyond those indicated in 
+the operational sections of the specifications is not implied. Exposure to absolute maximum rating conditions may affect 
+device reliability. 
+Note 10. θJA is measured under natural convection (still air) at T A = 25 °C with the component mounted on a high 
+effective-thermal-conductivity four-layer test board on a JEDEC 51-7 thermal measurement standard. θJC is measured 
+at the exposed pad of the package. 
+Note 11. Devices are ESD sensitive. Handling precaution is recommended. 
+Note 12. The device is not guaranteed to function outside its operating conditions. 
+Note 13. The spec is guaranteed to function outside its operating conditions. 
+Note 14. The SCL clock frequency operate at 1MHz, the minimum data set-up time is 50ns. 
+ 
+  
+
+=== PAGE 20 ===
+RT6755 Preliminary  
+Copyright © 2021 Richtek Technology Corporation. All rights reserved.                  is a registered trademark of Richtek Technology Corporation.  
+www.richtek.com  DS6755-P03   December  2021  
+20 
+ 
+Typical Operating Characteristics 
+  
+  
+ 
+ 
+ 
+PAVDD Efficiency vs. Load Current
+50
+60
+70
+80
+90
+100
+0 50 100 150 200 250 300 350 400 450
+Load Current (mA)
+Efficiency (%)
+VIN = 3.3V, PAVDD = 7V, fOSC = 1200KHz
+NAVDD Efficiency vs. Load Current
+50
+60
+70
+80
+90
+100
+0 50 100 150 200 250 300 350 400
+Load Current (mA)
+Efficiency (%)
+VIN = 3.3V, NAVDD = −6V, fOSC = 1200KHz
+VIO Efficiency vs. Load Current
+50
+60
+70
+80
+90
+100
+0 50 100 150 200 250 300 350 400
+Load Current (mA)
+Efficiency (%)
+VIN = 3.3V, VIO= 1.8V, fOSC = 1200KHz
+Vcore Efficiency vs. Load Current
+50
+60
+70
+80
+90
+100
+0 100 200 300 400 500 600 700 800
+Load Current (mA)
+Efficiency (%)
+VIN = 3.3V, Vcore= 1.1V, fOSC = 1200KHz
+SIBO Efficiency vs. Load Current
+0
+10
+20
+30
+40
+50
+60
+70
+80
+90
+100
+0 2 4 6 8 10 12
+Load Current (mA)
+Efficiency (%)
+VIN = 3.3V,VGH = 18V, VGL = −14V, fOSC = 1200KHz
+PAVDD Output Voltage vs. Load Current
+5.5
+5.6
+5.7
+5.8
+5.9
+6.0
+6.1
+6.2
+6.3
+6.4
+6.5
+0 50 100 150 200 250 300 350 400 450
+Load Current (mA)
+Output Voltage (V)
+VIN = 3.3V, PAVDD = 6V, fOSC = 1200KHz
+
+=== PAGE 21 ===
+  Preliminary RT6755 
+Copyright © 2021 Richtek Technology Corporation. All rights reserved.                  is a registered trademark of Richtek Technology Corporation. 
+DS6755-P03   December  2021   www.richtek.com 
+21 
+ 
+ 
+ 
+ 
+  
+ 
+ 
+ 
+NAVDD Output Voltage vs. Load Current
+-7.0
+-6.8
+-6.6
+-6.4
+-6.2
+-6.0
+-5.8
+-5.6
+-5.4
+-5.2
+-5.0
+0 100 200 300 400
+Load Current (mA)
+Output Voltage (V)
+VIN = 3.3V, NAVDD = −6V, fOSC = 1200KHz
+VIO Output Voltage vs. Load Current
+1.75
+1.76
+1.77
+1.78
+1.79
+1.80
+1.81
+1.82
+1.83
+1.84
+1.85
+0 100 200 300 400
+Load Current (mA)
+Output Voltage (V)
+VIN = 3.3V, VIO = 1.8V, fOSC = 1200KHz
+Vcore Output Voltage vs. Load Current
+1.00
+1.02
+1.04
+1.06
+1.08
+1.10
+1.12
+1.14
+1.16
+1.18
+1.20
+0 100 200 300 400 500 600 700 800
+Load Current (mA)
+Output Voltage (V)
+VIN = 3.3V, Vcore = 1.1V, fOSC = 1200KHz
+VCOM Output Voltage vs. Load Current
+-2.00
+-1.75
+-1.50
+-1.25
+-1.00
+-0.75
+-0.50
+-0.25
+0.00
+0 25 50 75 100
+Load Current (mA)
+Output Voltage (V)
+VIN = 3.3V, NAVDD = −6V, VCOM = −1V
+VGH Output Voltage vs. SIBO  Load Current
+17.5
+17.6
+17.7
+17.8
+17.9
+18.0
+18.1
+18.2
+18.3
+18.4
+18.5
+0 2 4 6 8 10 12
+Load Current (mA)
+Output Voltage (V)
+VIN = 3.3V, VGH = 18V, VGL = −14V, fOSC = 1200KHz
+VGL Output Voltage vs. SIBO  Load Current
+-14.5
+-14.4
+-14.3
+-14.2
+-14.1
+-14.0
+-13.9
+-13.8
+-13.7
+-13.6
+-13.5
+0 2 4 6 8 10 12
+Load Current (mA)
+Output Voltage (V)
+VIN = 3.3V, VGH = 18V, VGL = −14V, fOSC = 1200KHz
+
+=== PAGE 22 ===
+RT6755 Preliminary  
+Copyright © 2021 Richtek Technology Corporation. All rights reserved.                  is a registered trademark of Richtek Technology Corporation.  
+www.richtek.com  DS6755-P03   December  2021  
+22 
+ 
+ 
+  
+ 
+ 
+ 
+ 
+ 
+ 
+ VCOM DNL Error vs.Output Voltage
+-1.5
+-1.0
+-0.5
+0.0
+0.5
+1.0
+1.5
+-2.7 -1.7 -0.7 0.3 1.3
+Output Voltage (V)
+DNL Error (LSB)
+VIN = 3.3V, NAVDD = −6V, fOSC = 1200KHz,  No load
+ VCOM INL Error vs.Output Voltage
+-1.5
+-1.0
+-0.5
+0.0
+0.5
+1.0
+1.5
+-2.7 -1.7 -0.7 0.3 1.3
+Output Voltage (V)
+INL Error (LSB)
+VIN = 3.3V, NAVDD = −6V, fOSC = 1200KHz,  No load
+V IN / 
+PA V DD /
+NA V DD 
+(2V/Div)
+Vcore /
+V IO / 
+V COM /
+LDO 
+(1V/Div)
+Time (5ms/Div)
+Power On Sequence I
+V IN
+P AVD D
+NA V DD
+LDO
+Vcore
+V IO
+V COM
+Time (2ms/Div)
+Power Off Sequence with Discharge I
+V IN / 
+PA V DD /
+NA V DD 
+(2V/Div)
+Reset /
+Vcore /
+V IO / 
+V COM /
+LDO 
+(1V/Div)
+V IN
+P AVD D
+NA V DD
+LDO
+Vcore
+V IO
+V COM
+Reset
+Time (5ms/Div)
+Power On Sequence II
+V IN / 
+PA V DD /
+NA V DD 
+(2V/Div)
+VGH /
+VGL
+(1V/Div)
+V IN
+P AVD D
+VGH
+NA V DD
+VGL
+Time (2ms/Div)
+Power Off Sequence with Discharge II
+V IN / 
+PA V DD /
+NA V DD 
+(2V/Div)
+VGH /
+VGL
+(1V/Div)
+V IN
+P AVD D
+VGH
+NA V DD
+VGL
+
+=== PAGE 23 ===
+  Preliminary RT6755 
+Copyright © 2021 Richtek Technology Corporation. All rights reserved.                  is a registered trademark of Richtek Technology Corporation. 
+DS6755-P03   December  2021   www.richtek.com 
+23 
+ 
+Applications Information 
+The RT6755 is an integrated solution for TFT LCD 
+panel, including PMIC and memory system. The 
+RT6755 application mechanism is introduced in later 
+sections. The RT6755 ’s 7 -bits slave address is 
+0100_011. 
+PMIC - Power management system provides a 
+sync-boost converters  for PAVDD , one synchronous 
+inverting converter for NAVDD, a low dropout LDO, two 
+synchronous Buck converters, a SIBO (Single Inductor 
+Bipolar Output) converter for VGH and VGL, one digital 
+VCOM operational amplifier with 7 bits calibrator, a 
+high performance operation amplifier, 2- CH gamma, 
+and a voltage detector. All channels of converters are 
+programmable, such as output voltage, power on 
+sequence, switching frequency of the converters, and 
+to disable each output channel selection. 
+Channel Setting 
+The RT6755 can enable or disable each output by I2C 
+interface. Users can control these outputs of PAVDD, 
+NAVDD, VGH, VGL, VCORE, VIO, LDO, VCOM, 
+GMA1, GMA2, and RESET, through programing the 
+02h and 03h register. The PAVDD, NAVDD, VGH, VGL, 
+VCOM, NAVDD, VCORE, V IO, LDO, GMA1 , GMA2 
+and RESET can be disable individually. Please refer  
+the register map for details. 
+Under Voltage Protection (UVP) 
+The RT6755 equip a fault conditions to shut down IC. 
+Once t he output voltage is below the 80% output 
+voltage, the internal timer starts counting and the f ault 
+condition continued about 60ms, the IC will shut down. 
+The fault protection would be keep until VIN falls below 
+UVLO. The protection start detecting at the soft -start 
+finish of the outputs channel, the voltage of outputs 
+should be larger than the UVP level afte r soft -start 
+finish and within 6 0ms. The protection behavior is 
+summarized in Table 2. 
+Short Circuit Protection (SCP) 
+The RT6755 equips SCP  protection to shut down IC  
+from damage.  
+For PAVDD and VGH, once output voltage falls below 
+1.3V, the converter  will stop switching immediately . If 
+the fault condition does not release within 60ms after 
+SCP occurred, all the other channels will be shut down 
+and IC will latch.  
+For NAVDD, VIO, Vcore  and VGL, once t he output 
+voltage is below 20% of target  voltage, the 
+corresponding converter will stop switching 
+immediately. If the fault condition does not release 
+within 60ms after SCP occurred, all the other channels 
+will be shut down and latch.  
+The protection is released when UVLO is cycled.  
+Please refer to the table 2 for the details. 
+Over Temperature Protection (OTP) 
+The RT 6755 equips an over temperature protection 
+(OTP) to prevent the excessive power dissipation from 
+overheating. The OTP will shut down switching 
+operation while junction temperature exceeds 
+approximately 1 60°C. All of output channel starting 
+work while junction temperature is cooled by 
+approximately 2 5°C. Prevent the maximum junction 
+temperature over around 15 0 ℃  and maintain 
+continuous operation. Please refer to the table 2 for the 
+details. 
+PAVDD Synchronous Boost Converter 
+The PAVDD synchronous Boost converter is high 
+efficiency PWM architecture with progr ammable 
+switching frequency. It performs fast transient 
+responses to meet the requirement of source driver 
+supplies for TFT -LCD display.  The output voltage is 
+controlled by a 6- bits register with 60  steps. The error 
+amplifier varies the COMP voltage by sensing the 
+PAVDD pin to regulate the output voltage. 
+PAVDD Switching Frequency Setting 
+The switching frequency is set by the I 2C interface, the 
+corresponding register is at 0x10h [2:0].  There are 5 
+steps in frequency setting for boost converter, the 
+options are 600kHz, 715kHz, 800kHz, 9 00kHz, 
+1000kHz and 12 00kHz. The switching frequency 
+default value is 1200kHz (0x05h). Please refer to the 
+register map for details. 
+ 
+
+=== PAGE 24 ===
+RT6755 Preliminary  
+Copyright © 2021 Richtek Technology Corporation. All rights reserved.                  is a registered trademark of Richtek Technology Corporation.  
+www.richtek.com  DS6755-P03   December  2021  
+24 
+ 
+PAVDD Slew Rate Setting 
+The PAVDD LX fal ling slew rate can be set  by I 2C 
+interface, to optimize the efficiency and EMI 
+performance. The corresponding register is at 
+0x10h[4:3]. The adjustable options are slowest (03h), 
+slow(02h), normal (01h) and fast  (00h). Th e default 
+value is set as normal. Please refer to the register map 
+for details. 
+PAVDD Output Voltage Setting 
+The PAVDD output voltage is set by I2C interface. User 
+can program the 0x05h[5:0] register to set PAVDD 
+output voltage. It has 6 bits for output voltage 
+adjustable, the setting range is from 4V to 7V, and each 
+voltage step is 50mV. The default voltage of PAVDD is 
+6V (0x28). Please refer the register map for detail on 
+how to adjust the output voltage. 
+PAVDD Soft-start time Setting 
+The PAVDD soft -start time could be adjusted by the 
+register 11h[6:4 ]. There are 3 bits and 8 steps. The 
+soft-start time setting range is from 2ms to 16ms, and 
+each step is 2ms. The sof t-start time default value is 
+4ms (0x01).  The soft - start sequence  is following the 
+reference voltage, the soft -start starting point is from 
+the slope of the soft -start down to  the point of crosses 
+0V. The soft-start finish point is PAVDD output voltage 
+ready. Please refer to Figure 5  and register map for 
+details. 
+PAVDD Power-on Delay Time Setting 
+The PAVDD power -on delay time is adjustable by I 2C 
+interface. There are 10 steps within 4 bits register of 
+11h. The delay time setting range is from 0ms to 45ms, 
+and each steps time is about 5ms. T he default value of 
+delay time is 10ms (0x02). The delay time is from the 
+MTP load data finish to PAVDD output voltage starting 
+rising. Please refer the Figure 5, and register map for 
+detail. 
+PAVDD Current Limit 
+The RT 6755 can limit the peak current to achieve 
+over-current protection. The IC senses the inductor 
+current of on period that is flowing into LX pin. The 
+minimum v alue of the current limit is 1 A. The internal 
+N-MOSFET will be turned off if the peak inductor 
+current achieve current limitation level, so that the 
+output current at current limit boundary is denoted as 
+IOUT(CL) and can be calculated as shown in the 
+following equation :  
+IN OUT IN SINOUT(CL) CL
+OUT OUT
+V (V V ) TV 1I  = η IV 2V L
+×−× × −× ×
+where η is the efficiency of the PAVDD sync -boost 
+converter, ICL is the value of the current limit and T S is 
+the switching period. 
+PAVDD Loop Compensation 
+The voltage feedback loop can be compensated with 
+an external compensation network consisted of R7 and 
+C13. Choose R7 to set high frequency integrator gain 
+for fast transient response and C13 to set the integrator 
+zero to maintain stability. The recommended values are 
+75kΩ and 470pF for most applications. 
+Sync-Boost Inductor Selection 
+The inductance depends on the maximum input current. 
+The inductor ripple current range is 20% to 40% of 
+maximum input current that is a general rule. If 40% is 
+selected as an example, the inductor ripple current can 
+be calculated as following equation :  
+OUT OUT(MAX)
+IN(MAX)
+IN
+VII  = η V
+×
+×                        
+RIPPLE IN(MAX)I  = 0.4 I ×                        
+Where η is the efficiency of the synchronous boost 
+converter, I IN(MAX) is the maximum input current and 
+IRIPPLE is the inductor ripple current. Beside, the input 
+peak current can be calculated by maximum input 
+current plus half of inductor ripple current shown as 
+following equation : 
+PEAK IN(MAX)I  = 1.2 I ×                        
+Note that the saturated current of inductor must be 
+greater than I PEAK. The inductance can be eventually 
+determined as following equation : 
+( ) ( )
+( )
+2
+IN OUT IN
+2
+OUT OUT(MAX) OSC
+η V V -VL = 
+0.4 V I f
+××
+×× ×
+                       
+
+=== PAGE 25 ===
+  Preliminary RT6755 
+Copyright © 2021 Richtek Technology Corporation. All rights reserved.                  is a registered trademark of Richtek Technology Corporation. 
+DS6755-P03   December  2021   www.richtek.com 
+25 
+ 
+Where f OSC is the PAVDD switching frequency. For 
+better system performance, a shielded inductor is 
+preferred to avoid EMI problems. 
+Sync-Boost Output Capacitor Selection 
+Output ripple voltage is an important index for 
+estimating the performance. This portion consists of 
+two parts, one is the product of IN L OUT1(I + ΔI -I )2  and 
+ESR of output capacit or, another part is formed by 
+charging and discharging process of output capacitor. 
+Refer to Figure 6 , evaluate ΔV OUT1 by ideal energy 
+equalization. According to the definition of Q, the Q 
+value can be calculated as following equation :  
+IN L OUT IN L OUT
+IN OUT OUT1
+OUT OSC
+11 1Q = I + ΔI -I + I - ΔI -I22 2
+V 1       = C ΔVVf
+  ×     
+×× ×
+    
+Where TS is the inverse of switching frequency and the 
+ΔIL is the inductor ripple current. Move COUT to left side 
+to estimate the value of ΔVOUT1 as following equation : 
+OUTOUT1
+OUT OSC
+DIΔV  = η Cf
+×
+××                        
+Then take the ESR into consideration, the ESR voltage 
+can be determined as the following equation : 
+OUT IN OSCESR ESRI V DTΔV  = + R1-D 2L
+×× ×
+ 
+Finally, the output ripple voltage ΔV OUT is combined 
+from theΔVOUT1 and ΔVESR as following equation : 
+OUT OUT1 ESRΔV  = Δ V+ ΔV  
+In the general application, the PAVDD output capacitor 
+is recommended that to use four  10µF/X5R/0603 
+capacitors.  
+NAVDD Synchronous Buck-Boost Converter 
+The NAVDD synchronous Buck-Boost converter is high 
+efficiency PWM architecture with programmable 
+switching frequency. It performs fast transient 
+responses to meet the requirement of source driver 
+supplies for TFT -LCD display. There are 31 steps 
+within 6-bits register to control output voltage. 
+ 
+Time
+Time
+Inductor Current
+Output Current
+Output Ripple 
+Voltage (ac)
+(1-D)TS
+ΔVOUT1
+Input Current
+ΔIL
+ 
+Figure 6. The Output Ripple Voltage without the 
+Contribution of ESR 
+NAVDD Power-on Delay Time Setting 
+The NAVDD power -on delay time is adjustable by I2C  
+interface. There are 10 steps within 4 bits register of 
+12h[3:0]. The power-on delay time setting range is from 
+0 ms to 45 ms, and each steps time is 5ms. Th e delay 
+time default value is 10ms (0x02). The delay time is 
+from the MTP load data finish to NAVDD output voltage 
+starting falling. Please refer to register map for detail. 
+NAVDD Soft-Start Time Setting 
+The NAVDD has an internal soft -start mechanism  to 
+reduce the input inrush current. The NAVDD soft -start 
+time can be adjusted by the register 12h[6:4]. There are 
+3 bits and 8 steps for setting. The soft-start time setting 
+range is from 2 ms to 16 ms, and each step is 2 ms. 
+The sof t-start time default value is 4 ms (0x01). The 
+soft-start time starts from the NAVDD delay time 
+counting finish. The stop point of soft -start time is 
+NAVDD output voltage ready. Please refer to Fi gure 5 
+and register map for details. 
+NAVDD Output Voltage Setting 
+The NAVDD output voltage is adjusted by I2C interface. 
+User can write data into the register 06h[4:0]. There are 
+5 bits for output voltage adjustable, the setting range is 
+from -4V to - 7V, and each voltage step is - 0.1V. The 
+
+=== PAGE 26 ===
+RT6755 Preliminary  
+Copyright © 2021 Richtek Technology Corporation. All rights reserved.                  is a registered trademark of Richtek Technology Corporation.  
+www.richtek.com  DS6755-P03   December  2021  
+26 
+ 
+default value is - 6V(0x14). Please refer the register 
+map for detail on how to adjust the output voltage. 
+NAVDD Inductor Selection 
+The NAVDD Buck -Boost conv erter is able to operate 
+with 10 μH inductor. The main parameter for inductor 
+selection is the saturation current of the inductor which 
+should be higher than the peak switch current as 
+calculated in the Design Procedure section with 
+additional margin to cover for heavy load transients. 
+Another important parameter is the inductor DC 
+resistance. Usually, lower DC resistance has hi gher 
+efficiency. The type and core material of the inductor 
+influence the efficiency as well. 
+NAVDD Output Capacitor Selection 
+For the best output voltage filtering, low ESR ceramic 
+capacitors are recommended. Four 10μF/X5R/0603 
+capacitors in parallel are afford most applications. 
+Additional capacitors can be added to improve output 
+voltage ripple. 
+NAVDD Current Limitation 
+The RT6755 can limit the peak current to achieve over 
+current protection. The IC senses the inductor current 
+during an on period. The internal P -MOSFET will be 
+turned off if the peak inductor current reaches achieve 
+current limitation level. The NAVDD current limit can be 
+adjusted by I2C interface, the corresponding register is 
+at 0x13h [6:5]. The default value of NAVDD current limit 
+is 1.5A (01h).  
+NAVDD Switching Frequency Setting 
+The switching frequency is set by the I 2C interface, the 
+corresponding register is at 0x13h[2:0]. There are 5 
+steps in frequency setting for boost converter, the 
+options are 600kHz, 715kHz, 800kHz, 9 00kHz, 
+1000kHz and 12 00kHz. The switching frequency 
+default value is 1200kHz (0x05h). Please refer to the 
+register map for details. 
+NAVDD Slew Rate Setting 
+The N AVDD LX falling slew rate can be set by I 2C 
+interface, to optimize the efficiency and EMI 
+performance. The corresponding register is at 
+0x13h[4:3]. The adjustable options are slowest(03h), 
+slow(02h), normal(01h) and fast ( 00h). The default 
+value is set as normal. Please refer to the register map 
+for details. 
+VIO and Vcore : Sync. Buck converter 
+The VIO and Vcore are sync-buck converters which are 
+high efficiency PWM architecture with high switching 
+frequency and fast transient response. The output 
+voltage, switching frequency, LXB1 & LXB2 slew rate, 
+soft-start time and delay time setting all can be 
+controlled by the I2C interface.  
+VCORE Output Voltage setting 
+The VCORE sync-buck output voltage is set by the I 2C 
+interface. Users can program the 09h register to set 
+output voltage. It has a 6-bits register for output voltage 
+adjustment, the setting range is from 0.8V to 2V, and 
+each voltage step is 20mV. The defaul t output voltage 
+of Vcore is 1.1V (0xF h). Please refer to the register 
+map for details. 
+VCORE Delay Time Setting 
+The VCORE sync-buck converter has integrated a delay 
+function. The delay time is adjustable through the 
+18h[5:4] register by the I 2C interface. It has a 4- bits 
+register with 10 steps. The delay time setting range is 
+from 0ms to 45ms, and each step change is 5ms. The 
+delay time default value is 5ms (0x01h). The delay time 
+is defined as  the VIN rises over the UVLO to output 
+voltage of VCORE starts rising. Please refer to the 
+Timing Diagram, and register map for details. 
+VCORE Soft-start Time Setting 
+The V CORE sync-buck converter has an integrated 
+soft-start function to reduce the input inrush current of 
+power on. The soft -start time is setting through the 
+18h[5:4] register by the I 2C interface. It has a 2- bit 
+register with 4 steps. The soft-start time setting range is 
+from 2ms to 8ms, and each step change is 2ms. The 
+soft-start time default value is 4ms (0x01h). The soft - 
+start time is defined as  the VCORE output voltage start 
+rising to V CORE output voltage ready. Please refer to 
+the Timing Diagram, and register map for details. 
+
+=== PAGE 27 ===
+  Preliminary RT6755 
+Copyright © 2021 Richtek Technology Corporation. All rights reserved.                  is a registered trademark of Richtek Technology Corporation. 
+DS6755-P03   December  2021   www.richtek.com 
+27 
+ 
+VCORE Slew Rate Setting 
+The VCORE sync-buck converter has a LXB1 slew rate 
+control function to optimize the efficiency and EMI 
+performance. It has a 2bits register with 4 steps, user 
+can write the 17h[4:3] register to set LXB1 slew rate.  
+There are four options for slew rate adjustment, fast, 
+normal, slow, slowest. Set the register to 0x00h is fast. 
+On the contrary, set 0x03h is slowest slew rate. The 
+slew rate default value is 0x01h. Please refer to the 
+register map for details. 
+VCORE Switching Frequency Setting 
+The switching frequency of sync -buck converter is set 
+by I2C interface. It has a 3-bit register with 6 steps. The 
+switching frequency range is from 600kHz to 1200 kHz. 
+The switching frequency default value is 1200kHz 
+(0x05h). Please refer to the register map for details. 
+VIO Output Voltage Setting  
+The VIO sync -buck output voltage is set by the I 2C 
+interface. Users can write the 0Ah register to set 
+sync-buck output voltage. It has a 5- bit register for 
+output voltage adjustment, the setting range is from 1V 
+to 2.5V, and each voltage step is 50mV. The default 
+output voltage of VIO is 1.8V (0x10h). Please refer to 
+the register map for details.  
+VIO Delay Time Setting 
+The VIO sync -buck converter has integrated a delay 
+function. The delay time is adjustable by the I 2C 
+interface. It has a 4-bit register with 10 steps. The delay 
+time setting range is from 0ms to 45ms, and each step 
+change is 5ms. The delay time default value is 10ms 
+(0x02h). The delay time is defined from the VIN rises 
+over t he UVLO to VIO output voltage starts rising. 
+Please refer to the Timing Diagram, and register map 
+for details.  
+VIO Soft-Start Time Setting 
+The VIO sync -buck converter has an integrated 
+soft-start function to reduce the input inrush current of 
+power on. The soft -start time is setting through the 
+1Ah[5:4] register by the I 2C interface. It has a 2- bit 
+register with 4 steps. The soft-start time setting range is 
+from 2ms to 8ms, and each step change is 2ms. The 
+soft-start time default value is 4ms (0x01h). The soft - 
+start time is defined from the VIO output voltage start 
+rising to VIO output voltage ready. Please refer to the 
+Timing Diagram, and register map for details. 
+VIO Slew Rate Setting 
+The VIO sync -buck converter has a LXB2 slew rate 
+control function to optimize the efficiency and EMI 
+performance. It has a 2bits register with 4 steps, user 
+can write the 19h[4:3] register to set LXB2 slew rate.  
+There are four options for slew rate adjustment, fast, 
+normal, slow, slowest. Set the register to 0x00h is fast. 
+On the contrary, set 0x03h is slowest slew rate. The 
+slew rate default setting of VIO is normal (0x01h). 
+Please refer to the register map for details.  
+VIO Switching Frequency Setting 
+The switching frequency of VIOsync -buck converter is 
+set by I2C interface. It has a 3- bit register with 6 steps. 
+The switching freque ncy range is from 600kHz to 
+1200kHz. The switching frequency default value is 
+1200kHz (0x05h). Please refer to the register map for 
+details. 
+Sync. Buck Inductor Selection 
+The inductor value and o perating frequency determine 
+the ripple current according to a specific input and 
+output voltage. The ripple current, ΔIL, will increase 
+with higher VIN and decrease with higher inductance, 
+as shown in the equation below: 
+OUT OUTL
+SW IN
+VVΔI = 1-fL V
+   ×   ×  
+ 
+Having a lower ripple current reduces not only the ESR 
+losses in the output capacitors but also the output 
+voltage ripple. High frequency with small ripple current 
+can achieve the highest efficiency operation. However, 
+it requires a large inductor to achieve this  goal. For the 
+ripple current selection, the value of I L(MAX) / ΔIL = 0.4 is 
+a reasonable starting point. The largest ripple current 
+occurs at the highest VIN. To guarantee that the ripple 
+current stays below the specified maximum, the 
+inductor value shoul d be chosen according to the 
+following: 
+
+=== PAGE 28 ===
+RT6755 Preliminary  
+Copyright © 2021 Richtek Technology Corporation. All rights reserved.                  is a registered trademark of Richtek Technology Corporation.  
+www.richtek.com  DS6755-P03   December  2021  
+28 
+ 
+OUT OUT
+SW L(MAX) IN(MAX)
+VVL= 1-f ΔIV
+  ×  ×  
+ 
+Sync. Buck Output Capacitor Selection 
+The selection of C OUT is determined by the required 
+ESR to minimize voltage ripple. Moreover, the amount 
+of bulk capacitance is also a key for C OUT selection to 
+ensure that the control loop is stable. Loop stability can 
+be checked by viewing the load transient response. 
+The output ripple, VOUT, is determined by: 
+OUT L
+SW OUT
+1V = I ESR+ 8f C
+∆ ∆×  ××
+ 
+The output ripple will be the highest at the maximum 
+input voltage  since I L increases with input voltage. 
+Multiple capacitors placed in parallel may be needed to 
+meet the ESR and RMS current handling requirement. 
+Four 10uF/X5R/0603 capacitors are recommended for 
+VCORE and Two 10uF/X5R/0603 capacitors are 
+recommended for VIO. 
+Sync. Buck Input Capacitor Selection 
+The input capacitance, C IN is needed to filter the 
+trapezoidal current at the source of the high- side 
+MOSFET. To prevent large ripple current, a low ESR 
+input capacitor sized for the maximum RMS current 
+should be used. The RMS current is given by: 
+OUT INRMS OUT(MAX)
+IN OUT
+V VI = I -1VV××  
+This formula has a maximum at VIN = 2VOUT, where IRMS 
+=IOUT/2. This simple worst -case condition is commonly 
+used for design because even significant deviations do 
+not offer much relief. Choose a capacitor rated at a 
+higher temperature than required. Several capacitors 
+may also be paralleled to meet size or height 
+requirements in the design. For the input capacitor, a 
+10μF/6.3V low ESR ceramic capacitor is 
+recommended. 
+VGH/VGL SIBO Converter 
+The VGH/VGL SIBO converter provides a boost mode 
+for the positive (VGH) output voltage and an inverter 
+mode for the negative (VGL) output voltage. The output 
+voltage, switching frequency, soft -start time and delay 
+time setting all can be controlled by the I 2C interface. 
+For flexibility in applications, the SIBO converter input, 
+VINP, can be connected to either input voltage from 
+typical VIN or PAVDD output. 
+VGH Output Voltage Setting 
+The VGH output voltages are set by the I 2C interface. 
+Users can write the 01h[ 7] and 07h[4:0] register to set 
+VGH output voltage. The resolution of output voltage 
+can be adjusted by programing register 01h[7]. It has a 
+5-bit register for output voltage adjustment, the setting 
+range is from 10V to 30V if  01h[7]=0x00h, and each 
+voltage step is 1V. The default output voltage of VGH is 
+18V (0x08h). On the contrary, the setting range is from 
+6V to 10V at 01h[7]=0x01h, and each voltage step is 
+200mV. Please refer to the register map for details. 
+VGL Output Voltage Setting 
+The VGL output voltages are set by the I 2C interface. 
+Users can write 08h[5:0] register to set VGL output 
+voltage. It has a 6- bit register for output voltage 
+adjustment, the setting range is from -5.4V to -18V. The 
+default output voltage of VGL is -14V (0x2Bh). Please 
+refer to the register map for details. 
+VGH/VGL Switching Frequency Setting 
+The switching frequency of SIBO converter is set by I2C 
+interface. It has a 3- bits register with 6 steps. The 
+switching frequency range is from 600kHz to 1200 kHz. 
+The switching frequency default value is 1200kHz 
+(0x05h). Please refer to the register map for details. 
+VGH/VGL Delay Time Setting 
+The VGH/VGL SIBO converter has integrated a delay 
+function. The delay time is adjustable by the I 2C 
+interface. Both VGH/VGL have a 4-bits register with 16 
+steps. The delay tim e setting range is from 0ms to 
+75ms, and each step change is 5ms. The VG L delay 
+time default value is 15ms  (16h[3:0]=0x03h), the VGH 
+delay time default value is 25ms (15h[3:0]=0x05h). The 
+delay time is defined from the VIN rises over the UVLO 
+to VGL (VGH) output voltage starts falling (rising). For 
+most application, it’s recommended that set VGH delay 
+time larg er than VGL delay  time plus VGL soft start 
+time. Please refer to the Timing Diagram, and register 
+map for details. 
+
+=== PAGE 29 ===
+  Preliminary RT6755 
+Copyright © 2021 Richtek Technology Corporation. All rights reserved.                  is a registered trademark of Richtek Technology Corporation. 
+DS6755-P03   December  2021   www.richtek.com 
+29 
+ 
+VGH/VGL Soft-start Time Setting 
+The VGH/VGL SIBO converter has an integrated 
+soft-start function to reduce the input inrush current 
+when power on. It has a 2- bits register with 4 steps. 
+The soft-start time setting range is from 4ms to 12ms. 
+The VG L soft -start time default value is 4 ms 
+(16h[5:4]=0x00h). The VGH soft -start time default  
+value is 4ms (15h[5:4]=0x00h). The soft - start time is 
+defined from the VGL (VGH) output voltage start falling 
+(Rising) to VGL (VGH) output voltage ready. Please 
+refer to the Timing Diagram, and register map for 
+details. 
+LDO Output voltage Setting 
+The LDO linear regulator can supply up to 100mA 
+current with an input voltage of 3.3V. It uses an internal 
+P-MOSFET as the pass device. The LDO output 
+voltage setting can be achi eved by setting I2C register 
+(0Bh[3:0]) from 1.8V to 3V. It has 4bit with 13  steps. 
+The LDO default value is 2.5V(0x07h). 
+LDO Delay time Setting 
+The LDO linear regulator has integrated a delay 
+function. The delay time is adjustable by the I2C 
+interface. It has a 4-bits register with 10 steps, user can 
+write the 0Bh[7:4] register to set LDO delay time. The 
+delay time setting range is from 0ms to 45ms, and each 
+step change is 5ms. The delay time default value is 
+10ms (0x02h). The delay time is defined from  the VIN 
+rises over the UVLO to LDO output voltage starts rising. 
+Please refer to the Timing Diagram, and register map 
+for details. 
+Programmable VCOM 
+The RT6755 provides the ability to reduce the flicker of 
+an LCD Panel by adjusting the VCOM voltage during 
+production test and alignment. The output voltage is 
+adjusted by the I2C interface. There are two registers to 
+adjust the VCOM voltage, one is VCOM for coarse tune, 
+and another one is D-VCOM with independent slave ID 
+0x9Eh for fine tune. It is suggested to connect a 
+resistor 10 ohm between output pin and output 
+capacitor for better stability. 
+In general application, VCOM should not be set 0V. If 
+user don’t want to use this channel, please disable it. 
+VCOM Power-On Delay Time Setting 
+The VCOM is integrated power-on sequence control. 
+The delay time is adjustable by I 2C interface, there are 
+5 bits within register 0Dh[7:3]. The delay tim e setting 
+range is from 0ms to 155ms, and each step is 5ms. The 
+default value is 25ms (0x05h ). The delay time is 
+defined from  the VIN rises over the UVLO to VCOM 
+output voltage starts falling (rising).  Please refer the 
+Figure 5, and register map for detail. 
+VCOM Voltage Setting 
+The VCOM voltage is adjusted by the register 
+0x0Ch[7:0], it is provided 8bits resolution and 182 steps 
+for user setting.  The setting range is from - 2.56V to 
+1.06V, each step is 20mV. The default value is - 1V 
+(0x4Eh). Please refer the register map for detail. 
+D-VCOM Voltage Setting 
+The D-VCOM is used to fine tune VCOM voltage and is 
+programmable by I 2C interface as well , but has  
+independent slave ID 0x9E that is different than VCOM. 
+User can adjust it with “ D-VCOM I2C Write Timing 
+Sequence” section in I2C the following. The D -VCOM 
+provides 128 steps within 7 bits resolution. The default 
+value is equal to VCOM if set D -VCOM as 0x40.  
+Adjusting DVCOM upward from code 0x40 (center) 
+means increasing VCOM finely, each step is 10mV 
+upward. On the contray, adjusting DVCOM downward 
+from code 0x40 (center) means decreasing VCOM 
+finely, each step is 10mV downward. The setting range 
+is from (VCOM + 0.63V) to (VCOM – 0.64V). Please 
+refer the register map for detail. 
+GMA1/GMA2  
+The RT6755 provides 2- CH gamma correction under 
+6-bits resolution. The adjustment of the output is 
+provided by the I 2C interface. Users can write the 0Eh 
+(0Fh) register to set GMA1 (GMA2) output voltage. The 
+GMA1 setting range is from PAVDD to PAVDD-1.26V. 
+The GMA2 setting range is from NAVDD+1.26V to 
+NAVDD. 
+ 
+ 
+
+=== PAGE 30 ===
+RT6755 Preliminary  
+Copyright © 2021 Richtek Technology Corporation. All rights reserved.                  is a registered trademark of Richtek Technology Corporation.  
+www.richtek.com  DS6755-P03   December  2021  
+30 
+ 
+RESET Voltage Detector 
+The voltage detector monitors the VIN voltage to 
+generate a RESET signal from RESET pin while VIN is 
+lower than the detecting level and not latched. Both 
+detecting level and power -on delay time could be set 
+by I2C interface. The detecting level could b e adjusted 
+by the register (0x0D h [2:0]), it provided 6 options 
+within 3 bits . The delay tim e could be set by register 
+(0x1B[3:0]), the setting range is from 0ms to 75ms, the 
+each step is about 15ms. The delay time start from that 
+VIN over UVLO threshold, the stop point is that RESET 
+signal goes to high. 
+In addition, the voltage d etector can be turned off via 
+I2C interface 1Bh[5:4].  There are four options can be 
+selected: always high, or after RESET function is 
+triggered, keep low in 20ms, 40ms, 60ms , then return 
+to high level . Please refer to the Timing Diagram, and 
+register map for details. 
+ 
+Discharge Function 
+The PAVDD, NAVDD, VGH, VGL , VIO, Vcore  and 
+VCOM outputs voltage is integrated a discharge 
+function. The each output v oltage discharged from 
+100% to 20% rapidly , preventing phenomena such as 
+residual image on the display at power -off. The 
+discharge function also provided an option for user to 
+enable or disable, the o ption can set by the register 
+04h[8:0] individually for each channel. 
+Control Register (FFH) 
+The RT6755 provides a register for user choosing that 
+write/read data into MTP or register. User can set the 
+MSB of the register FFH goes to high, it means the 
+data is written into MTP. But writing data into register 
+don’t need to set the register FFH. In addition, reading 
+data from MTP need to set the LSB of register FFH to 
+high. On the contrary, reading data from register need 
+to set LSB to low. Please refer the “I 2C Write/Read 
+Timing Sequence” for detail. 
+ 
+ 
+Table 2. Protection Behavior Versus Protections 
+Block Protection Conditions Behavior Recovery 
+IC 
+OTP IC Junction Temp. > 
+160°C(typ) IC shut down.  
+VIN OVP VIN > 5.85V(typ) IC shut down. VIN < VIN_UVLO_F. 
+PAVDD 
+OCP ILX Peak > OCP 
+setting(10h[6:5]) 
+Normal operating: Cycle 
+by cycle current limit. Peak value of ILX < OCP 
+UVP PAVDD < 80% (typ) 
+Counting 60ms then all 
+channel shut down and 
+latch 
+VIN < VIN_UVLO_F. 
+SCP PAVDD < 1.3V (typ) 
+LX stop switching, and 
+then all channel shut 
+down and latch after 
+60ms 
+VIN < VIN_UVLO_F. 
+Pre-charge NG (VIN - PAVDD) > 0.2V LX stop switching. VIN - PAVDD < 0.2V 
+OVP PAVDD > 7.5V (typ) LX stop switching. PAVDD < OVP 
+NAVDD 
+OCP ILXI Peak  > OCP 
+setting(13h[6:5]) 
+Normal operating: Cycle 
+by cycle current limit. Peak value of ILXI < OCP 
+UVP NAVDD < 80% (typ) 
+Counting 60ms then all 
+channel shut down and 
+latch 
+VIN < VIN_UVLO_F. 
+
+=== PAGE 31 ===
+  Preliminary RT6755 
+Copyright © 2021 Richtek Technology Corporation. All rights reserved.                  is a registered trademark of Richtek Technology Corporation. 
+DS6755-P03   December  2021   www.richtek.com 
+31 
+ 
+Block Protection Conditions Behavior Recovery 
+SCP NAVDD < 20% (typ) 
+LXI stop switching, and 
+then all channel shut 
+down and latch after 
+60ms 
+VIN < VIN_UVLO_F. 
+Vcore 
+OCP ILXB1 Peak > 1.5A 
+(typ) 
+Normal operating: Cycle 
+by cycle current limit. Peak value of ILXB1 < OCP 
+UVP VCORE < 80% (typ) 
+Counting 60ms then all 
+channel shut down and 
+latch 
+VIN < VIN_UVLO_F. 
+SCP VCORE < 20% (typ) 
+LXB1 stop switching, and 
+then all channel shut 
+down and latch after 
+60ms 
+VIN < VIN_UVLO_F. 
+VIO 
+OCP ILXB2 Peak > 1.2A 
+(typ) 
+Normal operating: Cycle 
+by cycle current limit. Peak value of ILXB2 < OCP 
+UVP VIO < 80% (typ) 
+Counting 60ms then all 
+channel shut down and 
+latch 
+VIN < VIN_UVLO_F. 
+SCP VCORE < 20% (typ) 
+LXB2 stop switching, and 
+then all channel shut 
+down and latch after 
+60ms 
+VIN < VIN_UVLO_F. 
+VGH/L 
+OCP ILXH/N Peak > 1A 
+(typ) 
+Normal operating: Cycle 
+by cycle current limit. Peak value of ILXH/N < OCP 
+UVP 
+VGH < 80% (typ) Counting 60ms then all 
+channel shut down and 
+latch 
+VIN < VIN_UVLO_F. 
+VGL < 80% (typ) 
+SCP 
+VGH < 1.3V (typ) 
+LXH stop switching, and 
+then all channel shut 
+down and latch after 
+60ms VIN < VIN_UVLO_F. 
+VGL < 20% (typ) 
+LXN stop switching, and 
+then all channel shut 
+down and latch after 
+60ms 
+VCOM SCP IVCOM Over Current 
+Limit > ± 285mA (typ) 
+Normal operating: 
+Current limit. IVCOM < Current Limit 
+GAM1/2 SCP IGAM1/2 Over Current 
+Limit > ± 5mA (min) 
+Normal operating: 
+Current limit. IGAM1/2 < Current Limit 
+  
+
+=== PAGE 32 ===
+RT6755 Preliminary  
+Copyright © 2021 Richtek Technology Corporation. All rights reserved.                  is a registered trademark of Richtek Technology Corporation.  
+www.richtek.com  DS6755-P03   December  2021  
+32 
+ 
+I2C Command  
+PMIC Slave Address 
+7 6 5 4 3 2 1 0=R/W   
+0 1 0 0 0 1 1 0 46H 
+0 1 0 0 0 1 1 1 47H 
+ 
+D-VCOM Slave Address 
+7 6 5 4 3 2 1 0=R/W   
+1 0 0 1 1 1 1 0 9EH 
+1 1 1 1 1 1 1 1 9FH 
+ 
+PMIC I2C Write Timing Sequence (To DAC Register) 
+Write Single Data (07h)
+Write Multiple Data (00h~1Bh)
+S 0 1 0 0 0 1 1 0
+R/W
+A
+Slave ID
+A
+ACK from SlaveACK from Slave
+A
+ACK from Slave
+PRT6755 Data 1Bh A
+ACK from Slave
+● ● ● ● ● ●
+A A
+ACK from SlaveACK from Slave
+RT6755 Data 03h A
+ACK from Slave
+0 0 0 0 0 0 0 0
+RT6755 Data Address
+Unlock Code 1 = 0x65
+RT6755 Data 02hUnlock Code 2 = 0x9A
+S 0 1 0 0 0 1 1 0
+R/W
+A
+Slave ID
+A
+ACK from SlaveACK from Slave
+A
+ACK from Slave
+0 0 0 0 0 1 1 1
+RT6755 Data Address
+RT6755 Data 07h P
+S 0 1 0 0 0 1 1 0
+R/W
+A
+Slave ID
+A
+ACK from SlaveACK from Slave
+A
+ACK from Slave
+A
+ACK from Slave
+0 0 0 0 0 0 0 0
+RT6755 Data Address
+Unlock Code 1 = 0x65
+Unlock Code 2 = 0x9A P
+ 
+ 
+
+=== PAGE 33 ===
+  Preliminary RT6755 
+Copyright © 2021 Richtek Technology Corporation. All rights reserved.                  is a registered trademark of Richtek Technology Corporation. 
+DS6755-P03   December  2021   www.richtek.com 
+33 
+ 
+PMIC I2C Write Timing Sequence (To MTP) 
+Write Single Data (07h)
+S 0 1 0 0 0 1 1 0
+R/W
+A
+Slave ID
+A
+ACK from SlaveACK from Slave
+1 X X X X X X 0 A
+ACK from Slave
+P1 1 1 1 1 1 1 1
+Control Register Address
+S 0 1 0 0 0 1 1 0
+R/W
+A
+Slave ID
+A
+ACK from SlaveACK from Slave
+A
+ACK from Slave
+A
+ACK from Slave
+0 0 0 0 0 0 0 0
+RT6755 Data Address
+Unlock Code 1 = 0x65
+Unlock Code 2 = 0x9A P
+S 0 1 0 0 0 1 1 0
+R/W
+A
+Slave ID
+A
+ACK from SlaveACK from Slave
+A
+ACK from Slave
+0 0 0 0 0 1 1 1
+RT6755 Data Address
+RT6755 Data 07h P
+Write Multiple Data (00h~1Bh)
+S 0 0 1 0 0 1 1 0
+R/W
+A
+Slave ID
+A
+ACK from SlaveACK from Slave
+A
+ACK from Slave
+PRT6755 Data 1Bh A
+ACK from Slave
+● ● ● ● ● ●
+A A
+ACK from SlaveACK from Slave
+RT6755 Data 03h A
+ACK from Slave
+0 0 0 0 0 0 0 0
+RT6755 Data Address
+RT6755 Data 02h
+Unlock Code 1 = 0x65
+Unlock Code 2 = 0x9A
+S 0 1 0 0 0 1 1 0
+R/W
+A
+Slave ID
+A
+ACK from SlaveACK from Slave
+1 X X X X X X 0 A
+ACK from Slave
+P1 1 1 1 1 1 1 1
+Control Register Address
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+
+=== PAGE 34 ===
+RT6755 Preliminary  
+Copyright © 2021 Richtek Technology Corporation. All rights reserved.                  is a registered trademark of Richtek Technology Corporation.  
+www.richtek.com  DS6755-P03   December  2021  
+34 
+ 
+PMIC I2C Read Timing Sequence (From DAC Register) 
+Read Single Data (07h)
+Read Multiple Data (00h~1Bh)
+S 0 1 0 0 0 1 1 0
+R/W
+A
+Slave ID
+A
+ACK from SlaveACK from Slave
+0 X X X X X X 0 A
+ACK from Slave
+P1 1 1 1 1 1 1 1
+Control Register Address
+S 0 1 0 0 0 1 1 0
+R/W
+A
+Slave ID
+RT6755 Data Address A
+ACK from SlaveACK from Slave
+Sr 0 1 0 0 0 1 1 1
+R/W
+A A Ā P
+Slave ID
+NACK from Master
+RT6755 Data 00h RT6755 Data 1Bh
+ACK from MasterACK from Slave
+● ● ● ● ● ●
+S 0 1 0 0 0 1 1 0
+R/W
+A
+Slave ID
+A
+ACK from SlaveACK from Slave
+A
+ACK from Slave
+A
+ACK from Slave
+0 0 0 0 0 0 0 0
+RT6755 Data Address
+Unlock Code 1 = 0x65
+Unlock Code 2 = 0x9A P
+S 0 1 0 0 0 1 1 0
+R/W
+A
+Slave ID
+A
+ACK from SlaveACK from Slave
+A
+ACK from Slave
+A
+ACK from Slave
+0 0 0 0 0 0 0 0
+RT6755 Data Address
+Unlock Code 1 = 0x65
+Unlock Code 2 = 0x9A P
+S 0 1 0 0 0 1 1 0
+R/W
+A 0 0 0 0 0 1 1 1
+Slave ID
+A
+ACK from SlaveACK from Slave
+Sr 0 1 0 0 0 1 1 1
+R/W
+A
+Slave ID
+RT6755 Data 07h
+NACK from MasterACK from Slave
+P
+S 0 1 0 0 0 1 1 0
+R/W
+A
+Slave ID
+A
+ACK from SlaveACK from Slave
+0 X X X X X X 0 A
+ACK from Slave
+P1 1 1 1 1 1 1 1
+Control Register Address
+Ā
+ 
+ 
+ 
+ 
+ 
+ 
+
+=== PAGE 35 ===
+  Preliminary RT6755 
+Copyright © 2021 Richtek Technology Corporation. All rights reserved.                  is a registered trademark of Richtek Technology Corporation. 
+DS6755-P03   December  2021   www.richtek.com 
+35 
+ 
+PMIC I2C Read Timing Sequence (From MTP) 
+Read Multiple Data (00h~1Bh)
+Read Single Data (07h)
+S 0 1 0 0 0 1 1 0
+R/W
+A
+Slave ID
+A
+ACK from SlaveACK from Slave
+0 X X X X X X 1 A
+ACK from Slave
+P1 1 1 1 1 1 1 1
+Control Register Address
+S 0 1 0 0 0 1 1 0
+R/W
+A
+Slave ID
+RT6755 Data Address A
+ACK from SlaveACK from Slave
+Sr 0 1 0 0 0 1 1 1
+R/W
+A A Ā P
+Slave ID
+NACK from Master
+RT6755 Data 00h RT6755 Data 1Bh
+ACK from MasterACK from Slave
+● ● ● ● ● ●
+S 0 1 0 0 0 1 1 0
+R/W
+A
+Slave ID
+A
+ACK from SlaveACK from Slave
+A
+ACK from Slave
+A
+ACK from Slave
+0 0 0 0 0 0 0 0
+RT6755 Data Address
+Unlock Code 1 = 0x65
+Unlock Code 2 = 0x9A P
+S 0 1 0 0 0 1 1 0
+R/W
+A
+Slave ID
+A
+ACK from SlaveACK from Slave
+A
+ACK from Slave
+A
+ACK from Slave
+0 0 0 0 0 0 0 0
+RT6755 Data Address
+Unlock Code 1 = 0x65
+Unlock Code 2 = 0x9A P
+S 0 1 0 0 0 1 1 0
+R/W
+A 0 0 0 0 0 1 1 1
+Slave ID
+A
+ACK from SlaveACK from Slave
+Sr 0 1 0 0 0 1 1 1
+R/W
+A
+Slave ID
+RT6755 Data 07h
+NACK from MasterACK from Slave
+P
+S 0 1 0 0 0 1 1 0
+R/W
+A
+Slave ID
+A
+ACK from SlaveACK from Slave
+0 X X X X X X 1 A
+ACK from Slave
+P1 1 1 1 1 1 1 1
+Control Register Address
+Ā
+ 
+Note 15. If the I2C SCL frequency > 700kHz, only the single read can be used for MTP read. 
+ 
+ 
+ 
+ 
+
+=== PAGE 36 ===
+RT6755 Preliminary  
+Copyright © 2021 Richtek Technology Corporation. All rights reserved.                  is a registered trademark of Richtek Technology Corporation.  
+www.richtek.com  DS6755-P03   December  2021  
+36 
+ 
+D-VCOM I2C Write Timing Sequence (To DAC Register) 
+S 1 0 0 1 1 1 1 0
+R/W
+A
+Slave ID
+ACK from Slave
+1D-VCOM Data[7:1] A
+ACK from Slave
+P
+CMD
+ 
+D-VCOM I2C Write Timing Sequence (To MTP) 
+S 1 0 0 1 1 1 1 0
+R/W
+A
+Slave ID
+ACK from Slave
+0D-VCOM Data[7:1] A
+ACK from Slave
+P
+CMD
+ 
+D-VCOM I2C Read Timing Sequence (Data is the same as MTP) 
+Read D-VCOM data from register(DAC) that register data is the same as EEPROM
+S 1 0 0 1 1 1 1 1
+R/W
+A
+Slave ID
+ACK from Slave
+1D-VCOM Data[7:1] A
+ACK from Slave
+P
+CMD
+ 
+D-VCOM I2C Read Timing Sequence (Data is different to MT P) 
+Read D-VCOM data from register(DAC) that register data is different to EEPROM
+S 1 0 0 1 1 1 1 1
+R/W
+A
+Slave ID
+ACK from Slave
+0D-VCOM Data[7:1] A
+ACK from Slave
+P
+CMD
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+
+=== PAGE 37 ===
+  Preliminary RT6755 
+Copyright © 2021 Richtek Technology Corporation. All rights reserved.                  is a registered trademark of Richtek Technology Corporation. 
+DS6755-P03   December  2021   www.richtek.com 
+37 
+ 
+Register Map 
+Items Register 
+Address Resolution Range Default 
+value 
+Default 
+Code Step Bit 
+WP Soft-ware WP Code 
+00h 
+-- 
+Unlock Code1=0x65 
+-- 
+00h 
+-- 
+8 Bit 
+01h Unlock Code2=0x9A 00h 8 Bit 
+Channel 
+ON/OFF 
+Setting 
+EN_VCOM[7] 
+02h 
+-- Disable(0)/Enable(1) Enable 
+FFh 
+2 Steps 1 Bit 
+EN_LDO[6] -- Disable(0)/Enable(1) Enable 2 Steps 1 Bit 
+EN_VIO[5] -- Disable(0)/Enable(1) Enable 2 Steps 1 Bit 
+EN_VCORE[4] -- Disable(0)/Enable(1) Enable 2 Steps 1 Bit 
+EN_VGL[3] -- Disable(0)/Enable(1) Enable 2 Steps 1 Bit 
+EN_VGH[2] -- Disable(0)/Enable(1) Enable 2 Steps 1 Bit 
+EN_NAVDD[1] -- Disable(0)/Enable(1) Enable 2 Steps 1 Bit 
+EN_PAVDD[0] -- Disable(0)/Enable(1) Enable 2 Steps 1 Bit 
+EN_VGH High 
+Resolution(HR)[7] 
+03h 
+-- 10V~30V(0)/6V~10V(1) 10V~30V 
+7h 
+2 Steps 1 Bit 
+EN_VIO FCCM[6] -- PSM(0)/FCCM(1) PSM 2 Steps 1 Bit 
+EN_VCORE 
+FCCM[5] -- PSM(0)/FCCM(1) PSM 2 Steps 1 Bit 
+EXT_EN[4:3] -- Off, VCORE / NAVDD / 
+PAVDD Off 4 Steps 2 Bit  
+EN_RESET[2] -- Disable(0)/Enable(1) Enable 2 Steps 1 Bit 
+EN_GMA2[1] -- Disable(0)/Enable(1) Enable 2 Steps 1 Bit 
+EN_GMA1[0] -- Disable(0)/Enable(1) Enable 2 Steps 1 Bit 
+Channel 
+Discharge 
+Setting 
+EN_VCOM 
+Discharge [7] 
+04h 
+-- Disable(0)/Enable(1) Disable 
+00h 
+2 Steps 1 Bit 
+EN_LDO Discharge 
+[6] -- Disable(0)/Enable(1) Disable 2 Steps 1 Bit 
+EN_VIO Discharge 
+[5] -- Disable(0)/Enable(1) Disable 2 Steps 1 Bit 
+EN_VCORE 
+Discharge [4] -- Disable(0)/Enable(1) Disable 2 Steps 1 Bit 
+EN_VGL Discharge 
+[3] -- Disable(0)/Enable(1) Disable 2 Steps 1 Bit 
+EN_VGH Discharge 
+[2] -- Disable(0)/Enable(1) Disable 2 Steps 1 Bit 
+EN_NAVDD 
+Discharge [1] -- Disable(0)/Enable(1) Disable 2 Steps 1 Bit 
+EN_PAVDD 
+Discharge [0] -- Disable(0)/Enable(1) Disable 2 Steps 1 Bit 
+PAVDD 
+Voltage PAVDD[5:0] 05h 50mV 4.0V~7V 6.0V 28h 60 
+Steps 6bit 
+NAVDD 
+Voltage 
+Reserved[7:5] 
+06h 
+-- -- -- 
+14h 
+-- 3bit 
+NAVDD[4:0] -0.1V -4.0V~-7V -6.0V 30 
+Steps 5bit 
+
+=== PAGE 38 ===
+RT6755 Preliminary  
+Copyright © 2021 Richtek Technology Corporation. All rights reserved.                  is a registered trademark of Richtek Technology Corporation.  
+www.richtek.com  DS6755-P03   December  2021  
+38 
+ 
+Items Register 
+Address Resolution Range Default 
+value 
+Default 
+Code Step Bit 
+VGH 
+Voltage 
+Reserved[7:5] 
+07h 
+-- -- -- 
+08h 
+-- 3bit 
+VGH[4:0] 
+VGH_High_Res = 0 0.2V 6V~10V 7.6V 20 
+Steps 
+5bit 
+VGH[4:0] 
+VGH_High_Res = 1 1V 10V~30V 18V 5bit 
+VGL 
+Voltage 
+Reserved[7:6] 
+08h 
+-- -- -- 
+2Bh 
+-- 2bit 
+VGL[5:0] -0.2V -5.4V~-18V -14V 63 
+Steps 6bit 
+VCORE 
+Voltage 
+Reserved[7:6] 
+09h 
+-- -- -- 
+0Fh 
+-- 2bit 
+VCORE[5:0] 20mV 0.8V~2.0V 1.1V 60 
+Steps 6bit 
+VIO 
+Voltage 
+Reserved[7:5] 
+0Ah 
+-- -- -- 
+10h 
+-- 3bit 
+VIO[4:0] 50mV 1V~2.5V 1.8V 30 
+Steps 5bit 
+LDO 
+Delay 
+LDO Delay Time 
+[7:4] 0Bh 
+5ms 0m~45m 10ms 
+27h 
+10 
+Steps 4bit 
+LDO 
+Voltage LDO[3:0] 0.1V 1.8V~3V 2.5V 12 
+Steps 4bit 
+VCOM 
+Voltage VCOM[7:0] 0Ch 20mV -2.56V ~ 1.06V -1.0V 4Eh 60 
+Steps 8bit 
+VCOM 
+Delay 
+VCOM Delay Time 
+[7:3] 0Dh 
+5ms 0m~155ms 25ms 
+2Ah 
+32 
+Steps 5bit 
+RESET 
+Voltage RESET[2:0] 0.1V 2.0~2.5V 2.2V 5 Steps 3bit 
+GMA1 GMA1[5:0] 0Eh 20mV PAVDD ~  
+PAVDD-1.26V 
+PAVDD - 
+0.2V 0Ah 63 
+Steps 6bit 
+GMA2 GMA2[5:0] 0Fh 20mV NAVDD ~ NAVDD+ 
+1.26V 
+NAVDD + 
+0.2V 0Ah 63 
+Steps 6bit 
+PAVDD 
+Config 
+EN_PAVDD 
+FCCM[7] 
+10h 
+-- PSM(0)/FCCM(1) PSM 
+2Dh 
+2 Steps 1 Bit 
+PAVDD Current 
+Limit[6:5] 0.5A 1A~2.5A 1.5A 4 Steps 2bit 
+PAVDD LX Slew 
+Rate[4:3] NA Fast~ Slowest Normal 4 Steps 2bit 
+PAVDD LX 
+Frequency[2:0] NA 600~1200kHz 1200kHz 6 Steps 3bit 
+PAVDD Soft-start 
+Time[6:4] 11h 
+2ms 2m~16m 4ms 
+12h 
+8 Steps 3bit 
+PAVDD Delay 
+Time[3:0] 5ms 0m~45m 10ms 10 
+Steps 4bit 
+NAVDD 
+Config 
+NAVDD Soft-start 
+Time [6:4] 12h 
+2ms 2ms~16ms 4ms 
+12h 
+8 Steps 3bit 
+NAVDD Delay Time 
+[3:0] 5ms 0ms~45ms 10ms 10 
+Steps 4bit 
+EN_NAVDD 
+FCCM[7] 
+13h 
+-- PSM(0)/FCCM(1) PSM 
+0Dh 
+2 Steps 1 Bit 
+NAVDD Current 
+Limit[6:5] 0.5A 1.5A~3A 1.5A 4 Steps 2bit 
+NAVDD LXI Slew 
+Rate[4:3] NA Fast~ Slowest Normal 4 Steps 2bit 
+NAVDD 
+Frequency[2:0] NA 600~1200kHz 1200kHz 6 Steps 3bit 
+
+=== PAGE 39 ===
+  Preliminary RT6755 
+Copyright © 2021 Richtek Technology Corporation. All rights reserved.                  is a registered trademark of Richtek Technology Corporation. 
+DS6755-P03   December  2021   www.richtek.com 
+39 
+ 
+Items Register 
+Address Resolution Range Default 
+value 
+Default 
+Code Step Bit 
+VGH/VGL 
+Config 
+LXH/N Slew 
+Rate[4:3] 
+14h 
+NA Fast~ Slowest Normal 
+15h 
+4 Steps 2bit 
+SIBO VINP 
+Source[3] NA VIN / PAVDD VIN 2 Steps 1bit 
+LXP/LXN 
+Frequency[2:0] NA 600~1200kHz 1200kHz 6 Steps 3bit 
+VGH Soft-start 
+Time[5:4] 15h 
+NA 4m~12m 4ms 
+05h 
+4 Steps 2bit 
+VGH Delay 
+Time[3:0] 5ms 0m~75m 25ms 16 
+Steps 4bit 
+VGL Soft-start 
+Time[5:4] 16h 
+NA 4m~12m 4ms 
+03h 
+4 Steps 2bit 
+VGL Delay Time[3:0] 5ms 0m~75m 15ms 16 
+Steps 4bit 
+VCORE 
+Config 
+VCORE LXB1 Slew 
+Rate[4:3] 17h 
+NA Fast~ Slowest Normal 
+0Dh 
+4 Steps 2bit 
+VCORE LXB1 
+Frequency[2:0] NA 600~1200kHz 1200kHz 6 Steps 3bit 
+VCORE Soft-start 
+Time[5:4] 18h 
+2ms 2m~8ms 4ms 
+11h 
+4 Steps 2bit 
+VCORE Delay 
+Time[3:0] 5ms 0m~45m 5ms 10 
+Steps 4bit 
+VIO 
+Config 
+VIO LXB2 Slew 
+Rate[4:3] 19h 
+NA Fast~ Slowest Normal 
+0Dh 
+4 Steps 2bit 
+VIO LXB2 
+Frequency[2:0] NA 600~1200kHz 1200kHz 6 Steps 3bit 
+VIO Soft-start 
+Time[5:4] 1Ah 
+2ms 2m~8ms 4ms 
+12h 
+4 Steps 2bit 
+VIO Delay Time[3:0] 5ms 0m~45m 10ms 10 
+Steps 4bit 
+VCOM 
+Config 
+EN_VCOM Pull to 
+GND[7] 
+1Bh 
+NA Disable(0)/Enable(1) Enable 
+83h 
+2 Steps 1bit 
+VCOM Power off 
+Selection[6] NA Follow VIN UVLO_F(0) / 
+Follow RESET(1) 
+Follow VIN 
+UVLO_F 2 Steps 1bit 
+RESET 
+Config 
+RESET Power off 
+Control[5:4] 20ms Off, 20ms/40ms/60ms Off 4 Steps 2bit 
+RESET Delay 
+Time[3:0] 5ms 0m~75ms 15ms 16 
+Steps 4bit 
+Configurat
+ion 
+Parameter 
+VCOM 
+VCOM[7:1] 0x9E 10mV VCOM-10mVx64~ 
+VCOM+10mVx63 VCOM 40h 128 
+Steps 7bit 
+Control 
+Register 
+00h : Read data form 
+DAC 
+FFh 
+            
+01h : Read data form 
+EEPROM             
+80h : Write all DAC 
+into EEPROM             
+ 
+ 
+ 
+
+=== PAGE 40 ===
+RT6755 Preliminary  
+Copyright © 2021 Richtek Technology Corporation. All rights reserved.                  is a registered trademark of Richtek Technology Corporation.  
+www.richtek.com  DS6755-P03   December  2021  
+40 
+ 
+Register Table 
+ PAVDD 
+Voltage NAVDD Voltage VGH Voltage VGL 
+Voltage VCORE Voltage VIO Voltage 
+  PAVDD Reserved NAVDD Reserved VGH 
+HR=1 
+VGH 
+HR=0 VGL Reserved VCORE Reserved VIO 
+Data 
+Address 05h 06h 07h 08h 09h 0Ah 
+Bits [5:0] [7:5] [4:0] [7:5] [4:0] [4:0] [5:0] [7:6] [5:0] [7:5] [4:0] 
+Min 4.0V NA -4.0V NA 6V 10V -5.4V NA 0.8V NA 1V 
+Max 7V NA -7V NA 10V 30V -18 NA 2.0V NA 2.5V 
+Default 28h 00h 14h 00h 08h 08h 2Bh 00h 0Fh 00h 10h 
+Combin- 
+ation 28h 14h 08h 2Bh 0Fh 10h 
+Resolution 0.05V NA -0.1V NA 0.2V 1V -0.2V NA 0.02V NA 0.05V 
+0H 4.00V -- -4.0V -- 6.0V 10V -5.4V -- 0.8V -- 1V 
+1H 4.05V -- -4.1V -- 6.2V 11V -5.6V -- 0.82V -- 1.05V 
+2H 4.10V -- -4.2V -- 6.4V 12V -5.8V -- 0.84V -- 1.10V 
+3H 4.15V -- -4.3V -- 6.6V 13V -6.0V -- 0.86V -- 1.15V 
+4H 4.20V -- -4.4V -- 6.8V 14V -6.2V -- 0.88V -- 1.20V 
+5H 4.25V -- -4.5V -- 7.0V 15V -6.4V -- 0.90V -- 1.25V 
+6H 4.30V -- -4.6V -- 7.2V 16V -6.6V -- 0.92V -- 1.30V 
+7H 4.35V -- -4.7V -- 7.4V 17V -6.8V -- 0.94V -- 1.35V 
+8H 4.40V -- -4.8V -- 7.6V 18V -7.0V -- 0.96V -- 1.40V 
+9H 4.45V -- -4.9V -- 7.8V 19V -7.2V -- 0.98V -- 1.45V 
+AH 4.50V -- -5.0V -- 8.0V 20V -7.4V -- 1.00V -- 1.50V 
+BH 4.55V -- -5.1V -- 8.2V 21V -7.6V -- 1.02V -- 1.55V 
+CH 4.60V -- -5.2V -- 8.4V 22V -7.8V -- 1.04V -- 1.60V 
+DH 4.65V -- -5.3V -- 8.6V 23V -8.0V -- 1.06V -- 1.65V 
+EH 4.70V -- -5.4V -- 8.8V 24V -8.2V -- 1.08V -- 1.70V 
+FH 4.75V -- -5.5V -- 9.0V 25V -8.4V -- 1.10V -- 1.75V 
+10H 4.80V -- -5.6V -- 9.2V 26V -8.6V -- 1.12V -- 1.80V 
+11H 4.85V -- -5.7V -- 9.4V 27V -8.8V -- 1.14V -- 1.85V 
+12H 4.90V -- -5.8V -- 9.6V 28V -9.0V -- 1.16V -- 1.90V 
+13H 4.95V -- -5.9V -- 9.8V 29V -9.2V -- 1.18V -- 1.95V 
+14H 5.00V -- -6.0V -- 10.0V 30V -9.4V -- 1.20V -- 2.00V 
+15H 5.05V -- -6.1V --     -9.6V -- 1.22V -- 2.05V 
+16H 5.10V -- -6.2V --     -9.8V -- 1.24V -- 2.10V 
+17H 5.15V -- -6.3V --     -10.0V -- 1.26V -- 2.15V 
+18H 5.20V -- -6.4V --     -10.2V -- 1.28V -- 2.20V 
+19H 5.25V -- -6.5V --     -10.4V -- 1.30V -- 2.25V 
+1AH 5.30V -- -6.6V --     -10.6V -- 1.32V -- 2.30V 
+1BH 5.35V -- -6.7V --     -10.8V -- 1.34V -- 2.35V 
+1CH 5.40V -- -6.8V --     -11.0V -- 1.36V -- 2.40V 
+1DH 5.45V -- -6.9V --     -11.2V -- 1.38V -- 2.45V 
+1EH 5.50V -- -7.0V --     -11.4V -- 1.40V -- 2.50V 
+1FH 5.55V           -11.6V   1.42V     
+20H 5.60V           -11.8V   1.44V     
+21H 5.65V           -12.0V   1.46V     
+22H 5.70V           -12.2V   1.48V     
+23H 5.75V           -12.4V   1.50V     
+24H 5.80V           -12.6V   1.52V     
+25H 5.85V           -12.8V   1.54V     
+26H 5.90V           -13.0V   1.56V     
+27H 5.95V           -13.2V   1.58V     
+
+=== PAGE 41 ===
+  Preliminary RT6755 
+Copyright © 2021 Richtek Technology Corporation. All rights reserved.                  is a registered trademark of Richtek Technology Corporation. 
+DS6755-P03   December  2021   www.richtek.com 
+41 
+ 
+ PAVDD 
+Voltage NAVDD Voltage VGH Voltage VGL 
+Voltage VCORE Voltage VIO Voltage 
+  PAVDD Reserved NAVDD Reserved VGH 
+HR=1 
+VGH 
+HR=0 VGL Reserved VCORE Reserved VIO 
+28H 6.00V           -13.4V   1.60V     
+29H 6.05V           -13.6V   1.62V     
+2AH 6.10V           -13.8V   1.64V     
+2BH 6.15V           -14.0V   1.66V     
+2CH 6.20V           -14.2V   1.68V     
+2DH 6.25V           -14.4V   1.70V     
+2EH 6.30V           -14.6V   1.72V     
+2FH 6.35V           -14.8V   1.74V     
+30H 6.40V           -15.0V   1.76V     
+31H 6.45V           -15.2V   1.78V     
+32H 6.50V           -15.4V   1.80V     
+33H 6.55V           -15.6V   1.82V     
+34H 6.60V           -15.8V   1.84V     
+35H 6.65V           -16.0V   1.86V     
+36H 6.70V           -16.2V   1.88V     
+37H 6.75V           -16.4V   1.90V     
+38H 6.80V           -16.6V   1.92V     
+39H 6.85V           -16.8V   1.94V     
+3AH 6.90V           -17.0V   1.96V     
+3BH 6.95V           -17.2V   1.98V     
+3CH 7.00V           -17.4V   2.00V     
+3DH             -17.6V         
+3EH             -17.8V         
+3FH             -18.0V         
+ 
+  
+LDO 
+Delay 
+Time 
+LDO 
+Voltage 
+VCOM 
+Voltage 
+VCOM 
+Delay Time  
+RESET 
+Voltage 
+GMA1 
+Voltage 
+GMA2 
+Voltage 
+  
+LDO 
+Delay 
+Time 
+LDO VCOM VCOM 
+Delay Time RESET GMA1 GMA2 
+Data 
+Address 0Bh 0Ch 0Dh 0Eh 0Fh 
+Bits [7:4] [3:0] [7:0] [7:3] [2:0] [5:0] [5:0] 
+Min 0ms 1.8V -2.56V 0ms 2.0V PAVDD-1.26V NAVDD 
+Max 45ms 3.0V 1.06V 155ms 2.5V PAVDD NAVDD+1.26V 
+Default 2h 7h 4Eh 05h 02h 0Ah 0Ah 
+Combin- 
+ation 27h 4Eh 2Ah 0Ah 0Ah 
+Resolution 5ms 0.1V 0.02V 5ms 0.1V 20mV 20mV 
+0H 0ms 1.8V -2.56V 0ms 2V PAVDD NAVDD 
+1H 5ms 1.9V -2.54V 5ms 2.1V PAVDD-0.02V NAVDD+0.02V 
+2H 10ms 2.0V -2.52V 10ms 2.2V PAVDD-0.04V NAVDD+0.04V 
+3H 15ms 2.1V -2.50V 15ms 2.3V PAVDD-0.06V NAVDD+0.06V 
+4H 20ms 2.2V -2.48V 20ms 2.4V PAVDD-0.08V NAVDD+0.08V 
+5H 25ms 2.3V -2.46V 25ms 2.5V PAVDD-0.10V NAVDD+0.10V 
+6H 30ms 2.4V -2.44V 30ms   PAVDD-0.12V NAVDD+0.12V 
+7H 35ms 2.5V -2.42V 35ms   PAVDD-0.14V NAVDD+0.14V 
+8H 40ms 2.6V -2.40V 40ms   PAVDD-0.16V NAVDD+0.16V 
+9H 45ms 2.7V -2.38V 45ms   PAVDD-0.18V NAVDD+0.18V 
+
+=== PAGE 42 ===
+RT6755 Preliminary  
+Copyright © 2021 Richtek Technology Corporation. All rights reserved.                  is a registered trademark of Richtek Technology Corporation.  
+www.richtek.com  DS6755-P03   December  2021  
+42 
+ 
+  
+LDO 
+Delay 
+Time 
+LDO 
+Voltage 
+VCOM 
+Voltage 
+VCOM 
+Delay Time  
+RESET 
+Voltage 
+GMA1 
+Voltage 
+GMA2 
+Voltage 
+  
+LDO 
+Delay 
+Time 
+LDO VCOM VCOM 
+Delay Time RESET GMA1 GMA2 
+AH   2.8V -2.36V 50ms   PAVDD-0.20V NAVDD+0.20V 
+BH   2.9V -2.34V 55ms   PAVDD-0.22V NAVDD+0.22V 
+CH   3.0V -2.32V 60ms   PAVDD-0.24V NAVDD+0.24V 
+DH     -2.30V 65ms   PAVDD-0.26V NAVDD+0.26V 
+EH     -2.28V 70ms   PAVDD-0.28V NAVDD+0.28V 
+FH     -2.26V 75ms   PAVDD-0.30V NAVDD+0.30V 
+10H     -2.24V 80ms   PAVDD-0.32V NAVDD+0.32V 
+11H     -2.22V 85ms   PAVDD-0.34V NAVDD+0.34V 
+12H     -2.20V 90ms   PAVDD-0.36V NAVDD+0.36V 
+13H     -2.18V 95ms   PAVDD-0.38V NAVDD+0.38V 
+14H     -2.16V 100ms   PAVDD-0.40V NAVDD+0.40V 
+15H     -2.14V 105ms   PAVDD-0.42V NAVDD+0.42V 
+16H     -2.12V 110ms   PAVDD-0.44V NAVDD+0.44V 
+17H     -2.10V 115ms   PAVDD-0.46V NAVDD+0.46V 
+18H     -2.08V 120ms   PAVDD-0.48V NAVDD+0.48V 
+19H     -2.06V 125ms   PAVDD-0.50V NAVDD+0.50V 
+1AH     -2.04V 130ms   PAVDD-0.52V NAVDD+0.52V 
+1BH     -2.02V 135ms   PAVDD-0.54V NAVDD+0.54V 
+1CH     -2.00V 140ms   PAVDD-0.56V NAVDD+0.56V 
+1DH     -1.98V 145ms   PAVDD-0.58V NAVDD+0.58V 
+1EH     -1.96V 150ms   PAVDD-0.60V NAVDD+0.60V 
+1FH     -1.94V 155ms   PAVDD-0.62V NAVDD+0.62V 
+20H     -1.92V     PAVDD-0.64V NAVDD+0.64V 
+21H     -1.90V     PAVDD-0.66V NAVDD+0.66V 
+22H     -1.88V     PAVDD-0.68V NAVDD+0.68V 
+23H     -1.86V     PAVDD-0.70V NAVDD+0.70V 
+24H     -1.84V     PAVDD-0.72V NAVDD+0.72V 
+25H     -1.82V     PAVDD-0.74V NAVDD+0.74V 
+26H     -1.80V     PAVDD-0.76V NAVDD+0.76V 
+27H     -1.78V     PAVDD-0.78V NAVDD+0.78V 
+28H     -1.76V     PAVDD-0.80V NAVDD+0.80V 
+29H     -1.74V     PAVDD-0.82V NAVDD+0.82V 
+2AH     -1.72V     PAVDD-0.84V NAVDD+0.84V 
+2BH     -1.70V     PAVDD-0.86V NAVDD+0.86V 
+2CH     -1.68V     PAVDD-0.88V NAVDD+0.88V 
+2DH     -1.66V     PAVDD-0.90V NAVDD+0.90V 
+2EH     -1.64V     PAVDD-0.92V NAVDD+0.92V 
+2FH     -1.62V     PAVDD-0.94V NAVDD+0.94V 
+30H     -1.60V     PAVDD-0.96V NAVDD+0.96V 
+31H     -1.58V     PAVDD-0.98V NAVDD+0.98V 
+32H     -1.56V     PAVDD-1.00V NAVDD+1.00V 
+33H     -1.54V     PAVDD-1.02V NAVDD+1.02V 
+34H     -1.52V     PAVDD-1.04V NAVDD+1.04V 
+35H     -1.50V     PAVDD-1.06V NAVDD+1.06V 
+36H     -1.48V     PAVDD-1.08V NAVDD+1.08V 
+37H     -1.46V     PAVDD-1.10V NAVDD+1.10V 
+38H     -1.44V     PAVDD-1.12V NAVDD+1.12V 
+39H     -1.42V     PAVDD-1.14V NAVDD+1.14V 
+3AH     -1.40V     PAVDD-1.16V NAVDD+1.16V 
+
+=== PAGE 43 ===
+  Preliminary RT6755 
+Copyright © 2021 Richtek Technology Corporation. All rights reserved.                  is a registered trademark of Richtek Technology Corporation. 
+DS6755-P03   December  2021   www.richtek.com 
+43 
+ 
+  
+LDO 
+Delay 
+Time 
+LDO 
+Voltage 
+VCOM 
+Voltage 
+VCOM 
+Delay Time  
+RESET 
+Voltage 
+GMA1 
+Voltage 
+GMA2 
+Voltage 
+  
+LDO 
+Delay 
+Time 
+LDO VCOM VCOM 
+Delay Time RESET GMA1 GMA2 
+3BH     -1.38V     PAVDD-1.18V NAVDD+1.18V 
+3CH     -1.36V     PAVDD-1.20V NAVDD+1.20V 
+3DH     -1.34V     PAVDD-1.22V NAVDD+1.22V 
+3EH     -1.32V     PAVDD-1.24V NAVDD+1.24V 
+3FH     -1.30V     PAVDD-1.26V NAVDD+1.26V 
+40H     -1.28V         
+41H     -1.26V         
+42H     -1.24V         
+43H     -1.22V         
+44H     -1.20V         
+45H     -1.18V         
+46H     -1.16V         
+47H     -1.14V         
+48H     -1.12V         
+49H     -1.10V         
+4AH     -1.08V         
+4BH     -1.06V         
+4CH     -1.04V         
+4DH     -1.02V         
+4EH     -1.00V         
+4FH     -0.98V         
+50H     -0.96V         
+51H     -0.94V         
+52H     -0.92V         
+53H     -0.90V         
+54H     -0.88V         
+55H     -0.86V         
+56H     -0.84V         
+57H     -0.82V         
+58H     -0.80V         
+59H     -0.78V         
+5AH     -0.76V         
+5BH     -0.74V         
+5CH     -0.72V         
+5DH     -0.70V         
+5EH     -0.68V         
+5FH     -0.66V         
+60H     -0.64V         
+61H     -0.62V         
+62H     -0.60V         
+63H     -0.58V         
+64H     -0.56V         
+65H     -0.54V         
+66H     -0.52V         
+67H     -0.50V         
+68H     -0.48V         
+69H     -0.46V         
+6AH     -0.44V         
+6BH     -0.42V         
+
+=== PAGE 44 ===
+RT6755 Preliminary  
+Copyright © 2021 Richtek Technology Corporation. All rights reserved.                  is a registered trademark of Richtek Technology Corporation.  
+www.richtek.com  DS6755-P03   December  2021  
+44 
+ 
+  
+LDO 
+Delay 
+Time 
+LDO 
+Voltage 
+VCOM 
+Voltage 
+VCOM 
+Delay Time  
+RESET 
+Voltage 
+GMA1 
+Voltage 
+GMA2 
+Voltage 
+  
+LDO 
+Delay 
+Time 
+LDO VCOM VCOM 
+Delay Time RESET GMA1 GMA2 
+6CH     -0.40V         
+6DH     -0.38V         
+6EH     -0.36V         
+6FH     -0.34V         
+70H     -0.32V         
+71H     -0.30V         
+72H     -0.28V         
+73H     -0.26V         
+74H     -0.24V         
+75H     -0.22V         
+76H     -0.20V         
+77H     -0.18V         
+78H     -0.16V         
+79H     -0.14V         
+7AH     -0.12V         
+7BH     -0.10V         
+7CH     -0.08V         
+7DH     -0.06V         
+7EH     -0.04V         
+7FH     -0.02V         
+80H     0.00V         
+81H     0.02V         
+82H     0.04V         
+83H     0.06V         
+84H     0.08V         
+85H     0.10V         
+86H     0.12V         
+87H     0.14V         
+88H     0.16V         
+89H     0.18V         
+8AH     0.20V         
+8BH     0.22V         
+8CH     0.24V         
+8DH     0.26V         
+8EH     0.28V         
+8FH     0.30V         
+90H     0.32V         
+91H     0.34V         
+92H     0.36V         
+93H     0.38V         
+94H     0.40V         
+95H     0.42V         
+96H     0.44V         
+97H     0.46V         
+98H     0.48V         
+99H     0.50V         
+9AH     0.52V         
+9BH     0.54V         
+9CH     0.56V         
+
+=== PAGE 45 ===
+  Preliminary RT6755 
+Copyright © 2021 Richtek Technology Corporation. All rights reserved.                  is a registered trademark of Richtek Technology Corporation. 
+DS6755-P03   December  2021   www.richtek.com 
+45 
+ 
+  
+LDO 
+Delay 
+Time 
+LDO 
+Voltage 
+VCOM 
+Voltage 
+VCOM 
+Delay Time  
+RESET 
+Voltage 
+GMA1 
+Voltage 
+GMA2 
+Voltage 
+  
+LDO 
+Delay 
+Time 
+LDO VCOM VCOM 
+Delay Time RESET GMA1 GMA2 
+9DH     0.58V         
+9EH     0.60V         
+9FH     0.62V         
+A0H     0.64V         
+A1H     0.66V         
+A2H     0.68V         
+A3H     0.70V         
+A4H     0.72V         
+A5H     0.74V         
+A6H     0.76V         
+A7H     0.78V         
+A8H     0.80V         
+A9H     0.82V         
+AAH     0.84V         
+ABH     0.86V         
+ACH     0.88V         
+ADH     0.90V         
+AEH     0.92V         
+AFH     0.94V         
+B0H     0.96V         
+B1H     0.98V         
+B2H     1.00V         
+B3H     1.02V         
+B4H     1.04V         
+B5H     1.06V         
+ 
+ PAVDD Config 
+  EN_PAVDD 
+FCCM 
+PAVDD 
+Current Limit 
+PAVDD 
+LX FSR 
+PAVDD LX 
+Frequency 
+PAVDD 
+Soft-start Time 
+PAVDD Delay 
+Time 
+Data 
+Address 10h 11h 
+Bits [7] [6:5] [4:3] [2:0] [6:4] [3:0] 
+Min NA 1A Slow 600kHz 2ms 0ms 
+Max NA 2.5A Fastest 1200kHz 16ms 45ms 
+Default 0h 1h 1h 5h 1h 2h 
+Combination 2Dh 12h 
+Resolution NA 0.5A NA NA 2ms 5ms 
+0H PSM 1.0A Fast 600kHz 2ms 0ms 
+1H FCCM 1.5A Normal 715kHz 4ms 5ms 
+2H   2.0A Slow 800kHz 6ms 10ms 
+3H   2.5A Slowest 900kHz 8ms 15ms 
+4H       1000kHz 10ms 20ms 
+5H       1200kHz 12ms 25ms 
+
+=== PAGE 46 ===
+RT6755 Preliminary  
+Copyright © 2021 Richtek Technology Corporation. All rights reserved.                  is a registered trademark of Richtek Technology Corporation.  
+www.richtek.com  DS6755-P03   December  2021  
+46 
+ 
+ PAVDD Config 
+  EN_PAVDD 
+FCCM 
+PAVDD 
+Current Limit 
+PAVDD 
+LX FSR 
+PAVDD LX 
+Frequency 
+PAVDD 
+Soft-start Time 
+PAVDD Delay 
+Time 
+6H        14ms 30ms 
+7H         16ms 35ms 
+8H           40ms 
+9H           45ms 
+ 
+ NAVDD Config 
+  NAVDD 
+Soft-start Time 
+NAVDD 
+Delay Time 
+EN_NAVD
+D FCCM 
+NAVDD 
+Current Limit 
+NAVDD 
+LXI SR 
+NAVDD LXI 
+Frequency 
+Data 
+Address 12h 13h 
+Bits [6:4] [3:0] [7] [6:5] [4:3] [2:0] 
+Min 2ms 0ms NA 1A Slow 600kHz 
+Max 16ms 45ms NA 2.5A Fastest 1200kHz 
+Default 1h 2h 0h 0h 1h 5h 
+Combinati
+on 12h 0Dh 
+Resolution 2ms 5ms NA 0.5A NA NA 
+0H 2ms 0ms PSM 1.5A Fast 600kHz 
+1H 4ms 5ms FCCM 2.0A Normal 715kHz 
+2H 6ms 10ms   2.5A Slow 800kHz 
+3H 8ms 15ms   3.0A Slowest 900kHz 
+4H 10ms 20ms       1000kHz 
+5H 12ms 25ms       1200kHz 
+6H 14ms 30ms         
+7H 16ms 35ms         
+8H   40ms        
+9H   45ms         
+ 
+ VGH/VGL Config 
+  LXH/N SR SIBO VINP 
+Source 
+LXP/LXN 
+Frequency 
+VGH 
+Soft-start 
+Time 
+VGH 
+Delay 
+Time 
+VGL 
+Soft-start 
+Time 
+VGL 
+Delay 
+Time 
+Data 
+Address 14h 15h 16h 
+Bits [5:4] [3] [2:0] [5:4] [3:0] [5:4] [3:0] 
+Min Slow NA 600kHz 4ms 0ms 4ms 0ms 
+Max Fastest NA 1200kHz 12ms 45ms 12ms 45ms 
+Default 1h 0h 5h 0h 5h 0h 3h 
+Combination 15h 05h 03h 
+Resolution NA NA NA NA 5ms NA 5ms 
+0H Fast VIN 600kHz 4ms 0ms 4ms 0ms 
+1H Normal PAVDD 715kHz 6ms 5ms 6ms 5ms 
+2H Slow   800kHz 8ms 10ms 8ms 10ms 
+3H Slowest   900kHz 12ms 15ms 12ms 15ms 
+4H     1000kHz   20ms   20ms 
+5H     1200kHz   25ms   25ms 
+6H         30ms   30ms 
+7H         35ms   35ms 
+
+=== PAGE 47 ===
+  Preliminary RT6755 
+Copyright © 2021 Richtek Technology Corporation. All rights reserved.                  is a registered trademark of Richtek Technology Corporation. 
+DS6755-P03   December  2021   www.richtek.com 
+47 
+ 
+ VGH/VGL Config 
+  LXH/N SR SIBO VINP 
+Source 
+LXP/LXN 
+Frequency 
+VGH 
+Soft-start 
+Time 
+VGH 
+Delay 
+Time 
+VGL 
+Soft-start 
+Time 
+VGL 
+Delay 
+Time 
+8H        40ms   40ms 
+9H         45ms   45ms 
+AH         50ms   50ms 
+BH         55ms   55ms 
+CH         60ms   60ms 
+DH         65ms   65ms 
+EH         70ms   70ms 
+FH         75ms   75ms 
+ 
+ VCORE Config VIO Config 
+  
+VCORE 
+LXB1 Slew 
+Rate 
+VCORE 
+LXB1 
+Frequency 
+VCORE 
+Soft-start 
+Time 
+VCORE 
+Delay Time 
+VIO LXB2 
+Slew Rate 
+VIO LXB2 
+Frequency 
+VIO 
+Soft-start 
+Time 
+VIO 
+Delay 
+Time 
+Data 
+Address 17h 18h 19h 1Ah 
+Bits [4:3] [2:0] [5:4] [3:0] [4:3] [2:0] [5:4] [3:0] 
+Min Slow 600kHz 2ms 0ms Slow 600kHz 2ms 0ms 
+Max Fastest 1200kHz 8ms 45ms Fastest 1200kHz 8ms 45ms 
+Default 1h 5h 1h 1h 1h 5h 1h 2h 
+Combin- 
+ation 0Dh 11h 0Dh 12h 
+Resolution NA NA 2ms 5ms NA NA 2ms 5ms 
+0H Fast 600kHz 2ms 0ms Fast 600kHz 2ms 0ms 
+1H Normal 715kHz 4ms 5ms Normal 715kHz 4ms 5ms 
+2H Slow 800kHz 6ms 10ms Slow 800kHz 6ms 10ms 
+3H Slowest 900kHz 8ms 15ms Slowest 900kHz 8ms 15ms 
+4H   1000kHz   20ms   1000kHz   20ms 
+5H   1200kHz   25ms   1200kHz   25ms 
+6H      30ms       30ms 
+7H       35ms       35ms 
+8H       40ms       40ms 
+9H       45ms       45ms 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+
+=== PAGE 48 ===
+RT6755 Preliminary 
+Copyright © 2021 Richtek Technology Corporation. All rights reserved.    is a registered trademark of Richtek Technology Corporation.  
+www.richtek.com DS6755-P03   December  2021  
+48 
+V COM Config RESET Config Digital VCOM 
+Voltage 
+V COM Pull 
+to GND 
+VCOM Power 
+off Follow 
+RESET Power 
+off Control 
+RESET Delay 
+Time D-VCOM
+Data 
+Address 1Bh Slave ID=0x9E 
+Bits [7] [6] [5:4] [3:0] [7:1] 
+Min NA NA NA 0ms NA 
+Max NA NA NA 75ms NA 
+Default 1h 0h 0h 3h 40h 
+Combination 83h 40h 
+Resolution NA NA 20ms 5ms 10mV 
+0H Disable Follow UVLO_F Always High 0ms VCOM-(10mVx64) 
+1H Enable Follow RESET 20ms 5ms VCOM-(10mVx63) 
+2H 40ms 10ms VCOM-(10mVx62) 
+3H 60ms 15ms VCOM-(10mVx61) 
+4H 20ms VCOM-(10mVx60) 
+5H 25ms VCOM-(10mVx59) 
+6H 30ms VCOM-(10mVx58) 
+7H 35ms VCOM-(10mVx57) 
+8H 40ms VCOM-(10mVx56) 
+9H 45ms VCOM-(10mVx55) 
+AH 50ms VCOM-(10mVx54) 
+BH 55ms VCOM-(10mVx53) 
+CH 60ms VCOM-(10mVx52) 
+DH 65ms VCOM-(10mVx51) 
+EH 70ms VCOM-(10mVx50) 
+FH 75ms VCOM-(10mVx49) 
+10H VCOM-(10mVx48) 
+11H VCOM-(10mVx47) 
+12H VCOM-(10mVx46) 
+13H VCOM-(10mVx45) 
+14H VCOM-(10mVx44) 
+15H VCOM-(10mVx43) 
+16H VCOM-(10mVx42) 
+17H VCOM-(10mVx41) 
+18H VCOM-(10mVx40) 
+19H VCOM-(10mVx39) 
+1AH VCOM-(10mVx38) 
+1BH VCOM-(10mVx37) 
+1CH VCOM-(10mVx36) 
+1DH VCOM-(10mVx35) 
+1EH VCOM-(10mVx34) 
+1FH VCOM-(10mVx33) 
+20H VCOM-(10mVx32) 
+21H VCOM-(10mVx31) 
+22H VCOM-(10mVx30) 
+23H VCOM-(10mVx29) 
+24H VCOM-(10mVx28) 
+25H VCOM-(10mVx27) 
+26H VCOM-(10mVx26) 
+27H VCOM-(10mVx25) 
+28H VCOM-(10mVx24) 
+29H VCOM-(10mVx23) 
+
+=== PAGE 49 ===
+  Preliminary RT6755 
+Copyright © 2021 Richtek Technology Corporation. All rights reserved.                  is a registered trademark of Richtek Technology Corporation. 
+DS6755-P03   December  2021   www.richtek.com 
+49 
+ 
+ VCOM Config RESET Config Digital VCOM 
+Voltage 
+  VCOM Pull 
+to GND 
+VCOM Power 
+off Follow 
+RESET Power 
+off Control 
+RESET Delay 
+Time D-VCOM 
+2AH         VCOM-(10mVx22) 
+2BH         VCOM-(10mVx21) 
+2CH         VCOM-(10mVx20) 
+2DH         VCOM-(10mVx19) 
+2EH         VCOM-(10mVx18) 
+2FH         VCOM-(10mVx17) 
+30H         VCOM-(10mVx16) 
+31H         VCOM-(10mVx15) 
+32H         VCOM-(10mVx14) 
+33H         VCOM-(10mVx13) 
+34H         VCOM-(10mVx12) 
+35H         VCOM-(10mVx11) 
+36H         VCOM-(10mVx10) 
+37H         VCOM-(10mVx9) 
+38H         VCOM-(10mVx8) 
+39H         VCOM-(10mVx7) 
+3AH         VCOM-(10mVx6) 
+3BH         VCOM-(10mVx5) 
+3CH         VCOM-(10mVx4) 
+3DH         VCOM-(10mVx3) 
+3EH         VCOM-(10mVx2) 
+3FH         VCOM-(10mVx1) 
+40H         VCOM 
+41H         VCOM+(10mVx1) 
+42H         VCOM+(10mVx2) 
+43H         VCOM+(10mVx3) 
+44H         VCOM+(10mVx4) 
+45H         VCOM+(10mVx5) 
+46H         VCOM+(10mVx6) 
+47H         VCOM+(10mVx7) 
+48H         VCOM+(10mVx8) 
+49H         VCOM+(10mVx9) 
+4AH         VCOM+(10mVx10) 
+4BH         VCOM+(10mVx11) 
+4CH         VCOM+(10mVx12) 
+4DH         VCOM+(10mVx13) 
+4EH         VCOM+(10mVx14) 
+4FH         VCOM+(10mVx15) 
+50H         VCOM+(10mVx16) 
+51H         VCOM+(10mVx17) 
+52H         VCOM+(10mVx18) 
+53H         VCOM+(10mVx19) 
+54H         VCOM+(10mVx20) 
+55H         VCOM+(10mVx21) 
+56H         VCOM+(10mVx22) 
+57H         VCOM+(10mVx23) 
+58H         VCOM+(10mVx24) 
+59H         VCOM+(10mVx25) 
+5AH         VCOM+(10mVx26) 
+5BH         VCOM+(10mVx27) 
+
+=== PAGE 50 ===
+RT6755 Preliminary  
+Copyright © 2021 Richtek Technology Corporation. All rights reserved.                  is a registered trademark of Richtek Technology Corporation.  
+www.richtek.com  DS6755-P03   December  2021  
+50 
+ 
+ VCOM Config RESET Config Digital VCOM 
+Voltage 
+  VCOM Pull 
+to GND 
+VCOM Power 
+off Follow 
+RESET Power 
+off Control 
+RESET Delay 
+Time D-VCOM 
+5CH         VCOM+(10mVx28) 
+5DH         VCOM+(10mVx29) 
+5EH         VCOM+(10mVx30) 
+5FH         VCOM+(10mVx31) 
+60H         VCOM+(10mVx32) 
+61H         VCOM+(10mVx33) 
+62H         VCOM+(10mVx34) 
+63H         VCOM+(10mVx35) 
+64H         VCOM+(10mVx36) 
+65H         VCOM+(10mVx37) 
+66H         VCOM+(10mVx38) 
+67H         VCOM+(10mVx39) 
+68H         VCOM+(10mVx40) 
+69H         VCOM+(10mVx41) 
+6AH         VCOM+(10mVx42) 
+6BH         VCOM+(10mVx43) 
+6CH         VCOM+(10mVx44) 
+6DH         VCOM+(10mVx45) 
+6EH         VCOM+(10mVx46) 
+6FH         VCOM+(10mVx47) 
+70H         VCOM+(10mVx48) 
+71H         VCOM+(10mVx49) 
+72H         VCOM+(10mVx50) 
+73H         VCOM+(10mVx51) 
+74H         VCOM+(10mVx52) 
+75H         VCOM+(10mVx53) 
+76H         VCOM+(10mVx54) 
+77H         VCOM+(10mVx55) 
+78H         VCOM+(10mVx56) 
+79H         VCOM+(10mVx57) 
+7AH         VCOM+(10mVx58) 
+7BH         VCOM+(10mVx59) 
+7CH         VCOM+(10mVx60) 
+7DH         VCOM+(10mVx61) 
+7EH         VCOM+(10mVx62) 
+7FH         VCOM+(10mVx63) 
+ 
+ 
+  
+
+=== PAGE 51 ===
+  Preliminary RT6755 
+Copyright © 2021 Richtek Technology Corporation. All rights reserved.                  is a registered trademark of Richtek Technology Corporation. 
+DS6755-P03   December  2021   www.richtek.com 
+51 
+ 
+MTP Program Sequence for Single Chip 
+MTP program timing sequence 
+ 
+VIN
+I2C Command MTP Program
+T1 T2
+UVLO_R UVLO_F
+ 
+Write Timing : 
+00h~1Bh : T1 = 50ms, T2 = 120ms 
+D-VCOM : T1 = 50ms, T2 = 15ms 
+Read Timing: 
+T1 = 50ms, T2 = 10ms 
+fSCL = 400kHz 
+ 
+I2C Protocol for MTP Program 
+I2C Write Timing Sequence 
+S 0 0 1 0 0 1 1 0
+R/W
+A
+Slave ID
+A
+ACK from SlaveACK from Slave
+A
+ACK from Slave
+PRT6755 Data 1Bh A
+ACK from Slave
+● ● ● ● ● ●
+A A
+ACK from SlaveACK from Slave
+RT6755 Data 03h A
+ACK from Slave
+0 0 0 0 0 0 0 0
+RT6755 Data Address
+RT6755 Data 02h
+Unlock Code 1 = 0x65
+Unlock Code 2 = 0x9A
+S 0 1 0 0 0 1 1 0
+R/W
+A
+Slave ID
+A
+ACK from SlaveACK from Slave
+1 X X X X X X 0 A
+ACK from Slave
+P1 1 1 1 1 1 1 1
+Control Register Address
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+
+=== PAGE 52 ===
+RT6755 Preliminary  
+Copyright © 2021 Richtek Technology Corporation. All rights reserved.                  is a registered trademark of Richtek Technology Corporation.  
+www.richtek.com  DS6755-P03   December  2021  
+52 
+ 
+I2C Read Timing Sequence 
+S 0 1 0 0 0 1 1 0
+R/W
+A
+Slave ID
+A
+ACK from SlaveACK from Slave
+0 X X X X X X 1 A
+ACK from Slave
+P1 1 1 1 1 1 1 1
+Control Register Address
+S 0 1 0 0 0 1 1 0
+R/W
+A
+Slave ID
+RT6755 Data Address A
+ACK from SlaveACK from Slave
+Sr 0 1 0 0 0 1 1 1
+R/W
+A A Ā P
+Slave ID
+NACK from Master
+RT6755 Data 00h RT6755 Data 1Bh
+ACK from MasterACK from Slave
+● ● ● ● ● ●
+S 0 1 0 0 0 1 1 0
+R/W
+A
+Slave ID
+A
+ACK from SlaveACK from Slave
+A
+ACK from Slave
+A
+ACK from Slave
+0 0 0 0 0 0 0 0
+RT6755 Data Address
+Unlock Code 1 = 0x65
+Unlock Code 2 = 0x9A P
+ 
+ 
+Read/Write MTP Flow Chat 
+Write Flow
+START
+00h = 0x65
+01h = 0x9A
+.
+.
+.
+1Bh = Data
+FFh = 0x80
+STOP
+Delay 2ms
+Delay 120ms
+(Write a complete data 
+block)
+(Write to MTP)
+Read Flow
+START
+00h = Data
+.
+.
+.
+1Bh = Data
+FFh = 0x01
+STOP
+(To read data address 
+required return at least 
+one complete block data)
+(Read data from MTP)
+Delay 2ms
+00h = 0x65
+01h=0x9A
+Delay 2ms
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+
+=== PAGE 53 ===
+  Preliminary RT6755 
+Copyright © 2021 Richtek Technology Corporation. All rights reserved.                  is a registered trademark of Richtek Technology Corporation. 
+DS6755-P03   December  2021   www.richtek.com 
+53 
+ 
+MTP Program Application Circuit for Single Chip 
+VIN
+PGND
+PGND
+(Exposed Pad)
+VINN
+PGNDB
+AGND
+SDA
+SCL
+RT6755C1
+10uF
+VIN
+4.5V ± 0.5V
+(Current Limitation 
+> 500mA)
+3.3V ± 0.3V
+R1
+4.7kΩ
+R2
+4.7kΩ
+I2C 
+Interface
+VINP
+4
+14
+23
+2
+17 20
+28
+27
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+  
+
+=== PAGE 54 ===
+RT6755 Preliminary  
+Copyright © 2021 Richtek Technology Corporation. All rights reserved.                  is a registered trademark of Richtek Technology Corporation.  
+www.richtek.com  DS6755-P03   December  2021  
+54 
+ 
+Thermal Considerations 
+The junction temperature should never exceed the 
+absolute maximum junction temperature T J(MAX), listed 
+under Absolute Maximum Ratings, to avoid permanent 
+damage to the device. The maximum allowable power 
+dissipation depends on the thermal resistance of the IC 
+package, the PCB layout, the rate of surrounding 
+airflow, and the difference between the junction and 
+ambient temperatures. The maxim um power 
+dissipation can be calculated using the following 
+formula : 
+PD(MAX) = (TJ(MAX) − TA) / θJA 
+where T J(MAX) is the maximum junction temperature, 
+TA is the ambient temperature, and θJA is the 
+junction-to-ambient thermal resistance. 
+For continuous operation, the maximum operating 
+junction temperature indicated under Recommended 
+Operating Conditions is 125°C. The junction-to- 
+ambient thermal resistance, θJA, is highly package 
+dependent. For a UQFN -28TL 3.5x3.5 package, the 
+thermal resistance, θ JA, is  31.2°C/W on a standard 
+JEDEC 51 -7 high effective- thermal-conductivity 
+four-layer test board. The maximum power dissipation 
+at TA = 25°C can be calculated as below :  
+PD(MAX) = (125° C − 25°C) / (31.2° C/W) = 3. 2W for a 
+UQFN-28TL 3.5x3.5 package. 
+The maximum  power dissipation depends on the 
+operating ambient temperature for the fixed T J(MAX) 
+and the thermal resistance, θJA. The derating curves in 
+Figure 2 allows the designer to see the effect of rising 
+ambient temperature on the maximum power 
+dissipation. 
+ 
+Figure 5. Derating Curve of Maximum Power 
+Dissipation 
+Layout Consideration 
+For the best performance of the RT6755. The following 
+descriptions are the guidelines for better PCB layout :  
+ The power components such as inductor(L1, L2, L3, 
+L4, L5), input cap(C 10, C26, C27, C40) and output 
+cap(C4, C5, C6, C7, C16, C17, C20, C21, C23, C24, 
+C29, C30, C31, C32, C44, C45, C46, C47) must be 
+placed as close as possible to reduce power loop. 
+The PCB trace between power components must be 
+as short and wide as possible. 
+ Minimize the size of the LX , LXI, LXB1, LXB2, LXP, 
+LXN node and keep it wide and short. Keep the LX, 
+LXI, LXB1, LXB2, LXP  and LXN node away from 
+those sensing pins (COMP, VCOM, NEG ) and 
+analog ground. 
+ The power ground (PGNDB, PGND) consists of input 
+and output capacitor grounds. 
+ The compensation circuit (R 7, C13) should be kept 
+away from the power loops and should be shielded 
+with a ground trace to prevent any noise coupling. 
+Place the compensation components as close as 
+possible to COMP pin. 
+ The exposed pad of the chip should be connected to 
+a ground plane for thermal consideration. 
+ 
+0.0
+0.4
+0.8
+1.2
+1.6
+2.0
+2.4
+2.8
+3.2
+3.6
+4.0
+0 25 50 75 100 125
+Ambient Temperature (°C)
+Maximum Power Dissipation (W) 1 Four-Layer PCB
+
+=== PAGE 55 ===
+  Preliminary RT6755 
+Copyright © 2021 Richtek Technology Corporation. All rights reserved.                  is a registered trademark of Richtek Technology Corporation. 
+DS6755-P03   December  2021   www.richtek.com 
+55 
+ 
+Top Layer:  
+ 
+Second Layer: 
+ 
+Third Layer: 
+ 
+Bottom Layer: 
+ 
+Figure 6. PCB Layout Guide 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+
+
+=== PAGE 56 ===
+RT6755 Preliminary  
+Copyright © 2021 Richtek Technology Corporation. All rights reserved.                  is a registered trademark of Richtek Technology Corporation.  
+www.richtek.com  DS6755-P03   December  2021  
+56 
+ 
+Outline Dimension 
+ 
+ 
+Symbol 
+Dimensions In Millimeters Dimensions In Inches 
+Min Max Min Max 
+A 0.500  0.600  0.020  0.024  
+A1 0.000  0.050  0.000  0.002  
+A3 0.100  0.200  0.004  0.008  
+U-Type 28TL QFN 3.5x3.5 (FC) Package 
+ 
+ 
+ 
+ 
+ 
+ 
+  
+
+
+=== PAGE 57 ===
+  Preliminary RT6755 
+Copyright © 2021 Richtek Technology Corporation. All rights reserved.                  is a registered trademark of Richtek Technology Corporation. 
+DS6755-P03   December  2021   www.richtek.com 
+57 
+ 
+Footprint Information 
+ 
+ 
+Package Number of Pin Tolerance 
+V/W/U/XQFN3.5x3.5-28T(FC) 28 ±0.05 
+ 
+ 
+ 
+Richtek Technology Corporation 
+14F, No. 8, Tai Yuen 1st Street, Chupei City 
+Hsinchu, Taiwan, R.O.C. 
+Tel: (8863)5526789 
+ 
+Richtek products are sold by description only. Richtek reserves the right to change the circuitry and/or specifications without notice at any time. Customers should 
+obtain the latest relevant information and data sheets before placing orders and should verify that such information is current and complete. Richtek cannot assume 
+responsibility for use of any circuitry other than circuitry entirely embodied in a Richtek product. Information furnished by  Richtek is believed to be accurate and 
+reliable. However, no responsibility is assumed by Richtek or its subsidiaries for its use; nor for any infringements of patents or other rights of third partie s which may 
+result from its use. No license is granted by implication or otherwise under any patent or patent rights of Richtek or its subsidiaries.  
+
+
+=== PAGE 58 ===
+RT6755 Preliminary  
+Copyright © 2021 Richtek Technology Corporation. All rights reserved.                  is a registered trademark of Richtek Technology Corporation.  
+www.richtek.com  DS6755-P03   December  2021  
+58 
+ 
+Datasheet Revision History 
+Version Date Item Description 
+P00 2021/2/22  First Edition 
+P01 2021/7/26 
+General Description 
+Ordering Information 
+Pin Configuration 
+Typical Application Circuit 
+Absolute Maximum Ratings 
+Electrical Characteristics 
+Application Information 
+Outline Dimension 
+Footprint Information 
+Modify 
+P02 2021/9/24 Electrical Characteristics Modify 
+P03 2021/12/29 
+Typical Application Circuit 
+Timing Diagram 
+Typical Operating Characteristics 
+Applications Information 
+Modify 
+ 
