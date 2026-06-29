@@ -1,22 +1,22 @@
 # SlaveGUI
 
-SlaveGUI is a Windows desktop tool for PMIC register, VCOM, and panel power debugging over AUX and direct I2C. It is focused on display bring-up workflows where PMICs are accessed through DP/eDP AUX paths or through a JTool I2C adapter.
+SlaveGUI 是一个 Windows 桌面调试工具，用于通过 AUX 或直连 I2C 调试 PMIC 寄存器、VCOM 和屏电源相关参数。它面向显示模组 bring-up 场景，支持通过 DP/eDP AUX 访问面板侧 PMIC，也支持通过 JTool 适配器走直连 I2C。
 
-The current application code lives in `pmic_aux_gui/`. Direct-I2C runtime files are kept under `drivers/jtool/`.
+当前主程序代码位于 `pmic_aux_gui/`。直连 I2C 所需的运行文件单独保存在 `drivers/jtool/`。
 
-## Features
+## 功能
 
-- PMIC register read/write with DAC and MTP actions.
-- DPCD and I2C-over-AUX access through `gpu-aux`.
-- Display-port selection for each GPU backend so the target DP/eDP display can be chosen explicitly.
-- Direct I2C mode through `jtoollib.py` and `jtool.dll`.
-- Profile-driven register UI with sliders, raw hex editors, interpreted values, and bit radio controls.
-- VCOM panel separated from bulk register read/write.
-- Worker-process isolation so hardware access does not run directly on the Tk UI thread.
+- PMIC 寄存器 DAC/MTP 读写。
+- 通过 `gpu-aux` 实现 DPCD 与 I2C-over-AUX 访问。
+- 按 GPU 后端显式选择目标 DP/eDP 显示器，避免访问到错误面板。
+- 支持通过 `jtoollib.py` 与 `jtool.dll` 进行直连 I2C 调试。
+- 基于 profile 的寄存器界面，支持滑条、原始十六进制编辑、解释值显示和 bit 单选控制。
+- VCOM 面板与批量寄存器读写路径分离。
+- 硬件访问运行在 worker 子进程中，不直接阻塞 Tk UI 线程。
 
-## Supported Backends
+## 支持范围
 
-GPU/AUX backends:
+GPU/AUX 后端：
 
 - Intel eDP
 - Intel DP
@@ -25,14 +25,14 @@ GPU/AUX backends:
 - NVIDIA DP
 - Direct I2C
 
-TCON profiles:
+TCON 配置：
 
 - ANX
 - NOVA
 - Parade
 - Direct I2C
 
-PMIC profiles:
+PMIC 配置：
 
 - B602
 - B802
@@ -42,89 +42,89 @@ PMIC profiles:
 - RTQ6749
 - LX52042C
 
-## Requirements
+## 环境要求
 
 - Windows
-- Python 3.9 or newer
-- 64-bit Python when using `gpu-aux`
-- GPU vendor runtime dependencies required by `gpu-aux`
-  - AMD: ADL runtime
-  - Intel: IGCL / ControlLib
-  - NVIDIA: NVAPI
-- Hardware connected through the selected DP/eDP AUX port or direct I2C adapter
+- Python 3.9 或更新版本
+- 使用 `gpu-aux` 时建议使用 64 位 Python
+- `gpu-aux` 对应 GPU 后端所需的厂商运行环境：
+  - AMD：ADL runtime
+  - Intel：IGCL / ControlLib
+  - NVIDIA：NVAPI
+- 硬件已连接到所选 DP/eDP AUX 端口，或已连接直连 I2C 适配器
 
-Install Python dependencies:
+安装 Python 依赖：
 
 ```powershell
 python -m pip install -r requirements.txt
 ```
 
-This project pins `gpu-aux==1.3.1`. Version 1.3.1 includes the NVIDIA I2C write length fix needed for safe PMIC reads on NVIDIA AUX.
+当前项目固定使用 `gpu-aux==1.3.1`。该版本包含 NVIDIA I2C 写入长度修复，用于避免 NVIDIA AUX 后端读取 PMIC 时出现异常访问。
 
-## Run
+## 运行
 
-From the project root:
+在项目根目录执行：
 
 ```powershell
 python -m pmic_aux_gui
 ```
 
-or:
+或：
 
 ```powershell
 python run_pmic_aux_gui.py
 ```
 
-## Typical Workflow
+## 典型使用流程
 
-1. Select the GPU/AUX backend.
-2. Select the target display from the `Display` dropdown.
-3. Select TCON and PMIC.
-4. Confirm or edit the PMIC slave address.
-5. Connect.
-6. Use register read/write buttons or the VCOM panel.
+1. 选择 GPU/AUX 后端。
+2. 在 `Display` 下拉框中选择目标显示器。
+3. 选择 TCON 与 PMIC。
+4. 确认或修改 PMIC slave address。
+5. 点击 Connect 建立连接。
+6. 使用寄存器读写按钮或右侧 VCOM 面板进行调试。
 
-For NOVA panels, `NOVA IIC_EN` is optional and user controlled. Leave it disabled unless that path is required by the hardware setup.
+NOVA 面板的 `NOVA IIC_EN` 是可选路径，由用户手动控制。除非当前硬件链路确实需要该路径，否则保持关闭。
 
-## Packaging
+## 打包
 
-Install Nuitka when packaging is needed, then run:
+需要打包时先安装 Nuitka，然后执行：
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\build_nuitka.ps1
 ```
 
-Use the clean switch to remove the previous package output first:
+如果需要先清理旧产物：
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\build_nuitka.ps1 -Clean
 ```
 
-Packaging output is generated under `build/`, which is intentionally ignored by Git.
+打包产物会生成到 `build/` 下，该目录不会提交到 Git。
 
-## Project Layout
+## 项目结构
 
 ```text
 pmic_aux_gui/
-  gui.py        CustomTkinter application and register UI
-  service.py    hardware session lifecycle, worker process, AUX/I2C logic
-  profiles.py   PMIC/TCON/GPU profile metadata
-  main.py       application entry point
+  gui.py        CustomTkinter 界面与寄存器 UI
+  service.py    硬件会话生命周期、worker 子进程、AUX/I2C 逻辑
+  profiles.py   PMIC/TCON/GPU profile 元数据
+  main.py       程序入口
 
 drivers/jtool/
-  jtool.dll     direct-I2C runtime library
-  jtoollib.py   direct-I2C Python wrapper
+  jtool.dll     直连 I2C 运行库
+  jtoollib.py   直连 I2C Python 封装
 
-IC DATASHEET/   datasheets used to derive PMIC profiles
+IC DATASHEET/   用于建立 PMIC profile 的数据手册
 ```
 
-## Notes
+## 注意事项
 
-- Bulk register read/write intentionally excludes VCOM.
-- Command and unlock registers are not treated as ordinary bulk writable rows.
-- Reserved and non-numeric register bits are preserved where profile metadata provides masks.
-- Hardware validation is required for release confidence; smoke tests here only cover imports and software call paths.
+- 批量寄存器读写不包含 VCOM。
+- 命令寄存器与解锁寄存器不会作为普通批量可写行处理。
+- profile 提供 mask 元数据时，会保留保留位和非数值位。
+- 软件 smoke 测试只能覆盖导入和基础调用路径，最终 release 可靠性仍需要硬件验证。
 
-## License
+## 许可证
 
-This project is licensed under the GNU General Public License v3.0. See [LICENSE](LICENSE).
+本项目使用 GNU General Public License v3.0 许可证，详见 [LICENSE](LICENSE)。
