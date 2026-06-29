@@ -3,7 +3,7 @@
 ## Scope
 This repository is a Windows desktop GUI for PMIC register and VCOM debugging over `IIC over AUX`.
 
-The current application code lives in `pmic_aux_gui/`. The `circuit_project/` tree is primarily upstream dependency material, experiment notebooks, and hardware reference assets. Treat it as reference unless a task explicitly requires changing the lower-level library.
+The current application code lives in `pmic_aux_gui/`. Direct-I2C runtime files live in `drivers/jtool/`. Upstream experiment notebooks and large reference trees are not published in this repository.
 
 This file is for future agents and developers who need to modify the project with minimal rediscovery.
 
@@ -16,9 +16,8 @@ This file is for future agents and developers who need to modify the project wit
 - `run_pmic_aux_gui.py`: thin top-level launcher used by Nuitka
 - `build_nuitka.ps1`: one-file Windows packaging script
 - `requirements.txt`: minimal Python runtime dependency list
-- `circuit_project/pylib/`
-  - `OperateCardLib.py`, `OperateCardLib.dll`, `jtool.dll`: hardware access dependency
-- `circuit_project/exp/`: notebooks used as behavior references
+- `drivers/jtool/`
+  - `jtoollib.py`, `jtool.dll`: direct I2C hardware access dependency
 - `IC DATASHEET/`: PMIC datasheets used to derive register maps and formulas
 - `build/`, `pmic_aux_gui/__pycache__/`: generated artifacts, not primary edit targets
 
@@ -33,24 +32,24 @@ This file is for future agents and developers who need to modify the project wit
 
 `build_nuitka.ps1` bundles:
 - `app_icon.ico`
-- `circuit_project/pylib/OperateCardLib.py`
-- `circuit_project/pylib/OperateCardLib.dll`
-- `circuit_project/pylib/jtool.dll`
+- `drivers/jtool/jtoollib.py`
+- `drivers/jtool/jtool.dll`
 
 If runtime behavior depends on a new local asset, packaging must usually be updated too.
 
 ## Core Architecture
 
 ### High-level model
-- `SessionConfig`: user-selected GPU/TCON/PMIC and library paths
+- `SessionConfig`: user-selected GPU/TCON/PMIC and optional direct-I2C library paths
 - `PmicProfile`: PMIC register map, VCOM definition, unlock requirements, MTP behavior
-- `TconProfile`: adapter class and AUX-ready sequence
+- `TconProfile`: TCON identity and AUX-ready sequence
+- `GpuAuxCard`: `gpu_aux.AuxPort` compatibility adapter for DPCD and I2C-over-AUX
 - `LocalAuxSession`: real hardware session
-- `_WorkerBackedAuxSession`: subprocess wrapper used by GUI to isolate DLL/hardware work from the UI thread
+- `_WorkerBackedAuxSession`: subprocess wrapper used by GUI to isolate hardware work from the UI thread
 - `PmicAuxGuiApp`: Tk/CTk application
 
 ### Process model
-- The GUI does not talk to the DLL directly.
+- The GUI does not talk to hardware directly.
 - `connect()` in `service.py` starts a worker process by invoking:
   - source mode: `python -m pmic_aux_gui --aux-worker <payload>`
   - compiled mode: current executable with `--aux-worker`
@@ -87,10 +86,10 @@ The codebase currently reflects all four PMICs above. Older notes that mention o
 - No hardware autodetect is implemented.
 - TCON init is lazy. First meaningful read/write triggers initialization.
 - `NOVA IIC_EN` is optional and user-controlled. Do not make it unconditional.
-- `default_paths()` resolves DLL/module paths under `circuit_project/pylib/`.
+- AUX access uses the `gpu-aux` package (`gpu_aux.AuxPort`) instead of local `OperateCardLib` files.
 
 ### Read/write semantics
-- Standard PMIC register operations go through `iic_over_aux_read` / `iic_over_aux_write`.
+- Standard PMIC register operations go through `GpuAuxCard.iic_over_aux_read` / `GpuAuxCard.iic_over_aux_write`.
 - `target="mtp"` on normal register writes triggers the profile MTP action after the write.
 - VCOM is handled separately and may not follow ordinary register semantics.
 - `Read All` / `Write All` intentionally exclude VCOM in the bulk path.
@@ -128,7 +127,7 @@ The codebase currently reflects all four PMICs above. Older notes that mention o
   - keep them callable from `LocalAuxSession.ensure_ready()`
 
 ### What not to do
-- Do not bypass the worker and call DLL functions directly from GUI code.
+- Do not bypass the worker and call GPU AUX functions directly from GUI code.
 - Do not hardcode PMIC-specific widget behavior if the profile model can express it.
 - Do not make `NOVA IIC_EN` the default path for every NOVA panel.
 - Do not bulk-write special command registers or unlock bytes.
@@ -143,28 +142,23 @@ The codebase currently reflects all four PMICs above. Older notes that mention o
 - `IC DATASHEET/LX52042C_datasheet_preliminary_20231117.pdf`
 
 ### Behavior references
-- `circuit_project/pylib/OperateCardLib.py`
-- `circuit_project/exp/AUX.../EXP_nova.ipynb`
-- `circuit_project/exp/VCOM.../*.ipynb`
-- `circuit_project/exp/VOP.../*.ipynb`
+- `drivers/jtool/jtoollib.py`
+- Historical notebooks and upstream experiment trees may be used locally as private references, but they are not part of the published repository.
 
 Notebook and upstream library behavior should guide compatibility decisions when datasheet wording and existing field behavior conflict.
 
 ## TCON Notes
 
 ### ANX
-- Adapter class: `ANX_ANX2176`
-- Existing AUX entry relies on DPCD password/staging behavior in `OperateCardLib.py`
+- Existing AUX entry relies on DPCD password/staging behavior mirrored in `GpuAuxCard`.
 
 ### NOVA
-- Adapter class: `Nova_NT71877`
 - Standard AUX enable path is implemented in `_step_nova_enable_aux()`
 - Optional `NOVA IIC_EN` path is implemented in `_step_nova_iic_en()`
 - This path must remain optional
 
 ### Parade
-- Adapter class: `Parade_TC3410`
-- AUX entry is library-driven through `OperateCardLib.py`
+- AUX entry is driven through `GpuAuxCard` DPCD staging.
 
 ## PMIC Notes
 
@@ -210,7 +204,7 @@ Notebook and upstream library behavior should guide compatibility decisions when
 
 ## Practical Rules For Future Agents
 - Prefer editing source files under `pmic_aux_gui/`.
-- Treat `circuit_project/` as reference or bundled dependency, not as default edit surface.
+- Keep published runtime assets small; do not add upstream experiment trees or generated build outputs.
 - Preserve worker-process isolation.
 - Preserve lazy init.
 - Preserve optional `NOVA IIC_EN`.

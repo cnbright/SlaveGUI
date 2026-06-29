@@ -11,6 +11,8 @@ class RegisterDefinition:
     address: int
     min_value: int = 0x00
     max_value: int = 0xFF
+    value_mask: int | None = None
+    numeric_mask: int | None = None
     step: int = 1
     supports_slider: bool = True
     description: str = ""
@@ -61,6 +63,7 @@ class PmicProfile:
     slave_addr: int
     registers: tuple[RegisterDefinition, ...]
     vcom: VcomDefinition
+    supports_vcom: bool = True
     unlock_before_access: bool = False
     unlock_slave_addr: int | None = None
     unlock_register: int | None = None
@@ -73,7 +76,6 @@ class PmicProfile:
 class TconProfile:
     key: str
     name: str
-    adapter_class_name: str
     needs_ready_sequence: bool = False
     ready_sequence: tuple["InitStep", ...] = ()
     include_tcon_en: bool = False
@@ -94,6 +96,9 @@ class HardwareProxy:
     def iic_write(self, addr: int, offset: int, data: bytes) -> None:
         raise NotImplementedError
 
+    def iic_over_aux_write(self, addr: int, offset: int, data: list[int]) -> None:
+        raise NotImplementedError
+
 
 NOVA_IIC_EN_SCHEMES = {
     "io1": {"name": "IO1", "gpio_config": b"\x44\x05"},
@@ -107,6 +112,8 @@ def reg(
     *,
     max_value: int = 0xFF,
     min_value: int = 0x00,
+    value_mask: int | None = None,
+    numeric_mask: int | None = None,
     default_value: int | None = None,
     description: str = "",
     writable: bool = True,
@@ -120,6 +127,8 @@ def reg(
         address=address,
         min_value=min_value,
         max_value=max_value,
+        value_mask=value_mask,
+        numeric_mask=numeric_mask,
         default_value=default_value,
         description=description or name,
         writable=writable,
@@ -222,6 +231,50 @@ def fmt_vcom_offset_from_min(min_getter: Callable[[], float], step: float = 0.01
     return _formatter
 
 
+def fmt_b802_dimming_mode(value: int) -> str:
+    modes = ("PWM", "DC", "Mixed", "Mixed-26k")
+    return modes[value & 0x03]
+
+
+def fmt_b802_led_current(value: int) -> str:
+    code = value & 0xFF
+    if code == 0:
+        return "0.0mA"
+    if code > 0xBF:
+        return "reserved"
+    return f"{5.9 + 0.1 * code:.1f}mA"
+
+
+def fmt_b802_boost_compensation(value: int) -> str:
+    uvlo_values = ("2.3V", "2.7V", "3.2V", "3.8V")
+    ovp_code = (value >> 2) & 0x1F
+    ovp = min(10 + ovp_code, 40)
+    comp = "Internal" if value & 0x80 else "External"
+    return f"UVLO {uvlo_values[value & 0x03]} / OVP {ovp}V / {comp}"
+
+
+def fmt_b802_boost_frequency(value: int) -> str:
+    freq_values = (100, 150, 200, 250, 300, 400, 500, 600, 700, 800, 900, 1000, 1225, 1335, 1450, 1600)
+    pfm = "PFM on" if value & 0x20 else "PFM off"
+    return f"{freq_values[value & 0x0F]}kHz / {pfm}"
+
+
+def fmt_b802_lx_edge_rate(value: int) -> str:
+    rates = ("0.5V/ns", "1V/ns", "2V/ns", "4V/ns")
+    return f"LX {rates[value & 0x03]} / PFM code {(value >> 2) & 0x3F}"
+
+
+def fmt_b802_headroom(value: int) -> str:
+    headroom = (400, 460, 500, 560)
+    return f"{headroom[value & 0x03]}mV"
+
+
+def fmt_b802_led_short_protection(value: int) -> str:
+    ovp = ("2.1V", "2.52V", "2.8V", "3.5V")
+    short = "Short on" if value & 0x10 else "Short off"
+    return f"LED OVP {ovp[value & 0x03]} / {short}"
+
+
 _nvp_high_res = {"enabled": False}
 _b602_high_res = {"enabled": False}
 _rt_high_res = {"enabled": True}
@@ -265,6 +318,24 @@ def _mtp_standard_commit(hw: HardwareProxy, profile: PmicProfile, logger: Callab
     return "MTP commit finished via 0xFF <- 0x80"
 
 
+def _mtp_b802_commit(hw: HardwareProxy, profile: PmicProfile, logger: Callable[[str], None]) -> str:
+    import time
+
+    hw.iic_over_aux_write(profile.slave_addr, 0xFF, [0x80])
+    logger(f"B802 MTP commit: slave=0x{profile.slave_addr:02X} reg=0xFF data=0x80")
+    time.sleep(0.06)
+    return "B802 MTP commit finished via 0xFF <- 0x80"
+
+
+def _mtp_rtq6749_commit(hw: HardwareProxy, profile: PmicProfile, logger: Callable[[str], None]) -> str:
+    import time
+
+    hw.iic_over_aux_write(profile.slave_addr, 0xFF, [0x80])
+    logger(f"RTQ6749 MTP commit: slave=0x{profile.slave_addr:02X} reg=0xFF data=0x80")
+    time.sleep(0.5)
+    return "RTQ6749 MTP commit finished via 0xFF <- 0x80"
+
+
 def _step_nova_enable_aux(hw: HardwareProxy, logger: Callable[[str], None]) -> None:
     hw.write_dpcd(0x00102, b"\xC0")
     logger("NOVA AUX enabled: DPCD[0x00102] <- 0xC0")
@@ -286,6 +357,88 @@ def _step_nova_iic_en(hw: HardwareProxy, logger: Callable[[str], None], scheme_k
 
 
 PMIC_PROFILES: dict[str, PmicProfile] = {
+    "b802": PmicProfile(
+        key="b802",
+        name="B802-1V LED Driver",
+        slave_addr=0x6E,
+        registers=(
+            reg(
+                0x00,
+                "Dimming Mode",
+                max_value=0x03,
+                default_value=0x01,
+                description="Dimming mode: PWM, DC, Mixed or Mixed-26k",
+                display_formatter=fmt_b802_dimming_mode,
+            ),
+            reg(
+                0x01,
+                "LED Current",
+                max_value=0xBF,
+                value_mask=0xFF,
+                default_value=0x8D,
+                description="LED current setting, 6mA to 25mA/ch, 0.1mA/step",
+                display_formatter=fmt_b802_led_current,
+            ),
+            reg(
+                0x02,
+                "Boost Compensation / OVP / UVLO",
+                numeric_mask=0x7F,
+                default_value=0xE8,
+                description="VIN UVLO, OVP protection and boost compensation selection",
+                display_formatter=fmt_b802_boost_compensation,
+                bit_options=(
+                    bitopt("boost_compensation", "Boost Compensation", 0x80, enabled_label="Internal", disabled_label="External"),
+                ),
+            ),
+            reg(
+                0x03,
+                "PFM / Boost Frequency",
+                value_mask=0xFF,
+                numeric_mask=0x0F,
+                default_value=0x0C,
+                description="Boost switching frequency and PFM enable; preserve reserved bits on read/write",
+                display_formatter=fmt_b802_boost_frequency,
+                bit_options=(
+                    bitopt("pfm_function", "PFM Function", 0x20, enabled_label="On", disabled_label="Off"),
+                ),
+            ),
+            reg(
+                0x04,
+                "LX Edge Rate / PFM Low Frequency",
+                default_value=0xF3,
+                description="LX edge rate and lowest switching frequency for PFM",
+                display_formatter=fmt_b802_lx_edge_rate,
+            ),
+            reg(0x05, "Reserved", default_value=0x00, description="Reserved", writable=False, supports_slider=False),
+            reg(
+                0x06,
+                "LED Driver Headroom",
+                value_mask=0xFF,
+                numeric_mask=0x03,
+                default_value=0x22,
+                description="LED driver headroom setting",
+                display_formatter=fmt_b802_headroom,
+            ),
+            reg(
+                0x07,
+                "LED Short Protection / OVP",
+                max_value=0x13,
+                numeric_mask=0x03,
+                default_value=0x00,
+                description="LED OVP level and short protection enable",
+                display_formatter=fmt_b802_led_short_protection,
+                bit_options=(
+                    bitopt("led_short_protection", "LED Short Protection", 0x10, enabled_label="On", disabled_label="Off"),
+                ),
+            ),
+            reg(0x08, "Reserved", default_value=0x00, description="Reserved", writable=False, supports_slider=False),
+            reg(0xFF, "MTP Control", max_value=0x81, default_value=0x00, description="bit0 read MTP source, bit7 start MTP programming", writable=False),
+        ),
+        vcom=VcomDefinition(name="Unsupported", min_value=0x00, max_value=0x00),
+        supports_vcom=False,
+        mtp_action=MtpAction(name="B802 MTP Commit", callback=_mtp_b802_commit),
+        mtp_read_mode="native",
+    ),
     "nvp2515": PmicProfile(
         key="nvp2515",
         name="NVP2515",
@@ -543,14 +696,115 @@ PMIC_PROFILES: dict[str, PmicProfile] = {
                     bitopt("dis_avdd", "AVDD Discharge", 0x01),
                 ),
             ),
-            reg(0x03, "AVDD Voltage", max_value=0x7F, default_value=0x14, description="A0 plus AVDD[5:0], AVDD range 4.0V to 7.0V"),
-            reg(0x04, "AVEE Voltage", max_value=0xFF, default_value=0x05, description="PIN26 select plus AVEE[4:0], AVEE range -4.0V to -7.0V"),
-            reg(0x05, "VGH Voltage", max_value=0xFF, default_value=0x0B, description="RESET controls, VGH_30 and VGH[4:0]"),
-            reg(0x06, "VGL Voltage", max_value=0xFF, default_value=0x08, description="VIN_DISC and VGL[5:0], VGL range -5.4V to -18V"),
-            reg(0x07, "VCORE Voltage", max_value=0xFF, default_value=0x14, description="Inductor selection plus VCORE[5:0]"),
-            reg(0x08, "VIO Voltage", max_value=0xFF, default_value=0x10, description="Inductor selection, UBRR LDO enable and VIO[4:0]"),
-            reg(0x09, "LDO Voltage", max_value=0xFF, default_value=0x08, description="UBRR routing plus LDO[3:0]"),
-            reg(0x0B, "VDET Voltage", max_value=0x7F, default_value=0x02, description="EN_RESET2, VDET2[6:4] and VDET[2:0]"),
+            reg(
+                0x03,
+                "AVDD Voltage / A0 Address",
+                max_value=0xBF,
+                default_value=0x14,
+                description="A0 address select plus AVDD[5:0], AVDD range 4.0V to 7.0V",
+                bit_options=(
+                    bitopt(
+                        "addr_a0",
+                        "A0 Address",
+                        0x80,
+                        enabled_label="A0=1: D-VCOM 0x9A",
+                        disabled_label="A0=0: D-VCOM 0x9E",
+                    ),
+                ),
+            ),
+            reg(
+                0x04,
+                "AVEE Voltage",
+                max_value=0xFF,
+                value_mask=0xFF,
+                numeric_mask=0x1F,
+                default_value=0x05,
+                description="PIN26 select plus AVEE[4:0], AVEE range -4.0V to -7.0V",
+                bit_options=(
+                    bitopt("pin26_sel_d7", "PIN26_SEL D7", 0x80),
+                    bitopt("pin26_sel_d6", "PIN26_SEL D6", 0x40),
+                ),
+            ),
+            reg(
+                0x05,
+                "VGH Voltage",
+                max_value=0xFF,
+                value_mask=0xFF,
+                numeric_mask=0x1F,
+                default_value=0x0B,
+                description="RESET controls, VGH_30 and VGH[4:0]",
+                bit_options=(
+                    bitopt("reset1_ctrl", "RESET1 Disable", 0x80, enabled_label="Pull GND", disabled_label="Floating"),
+                    bitopt("reset2_ctrl", "RESET2 Disable", 0x40, enabled_label="Pull GND", disabled_label="Floating"),
+                    bitopt("vgh_30", "VGH_30", 0x20, enabled_label="30V at max", disabled_label="Normal"),
+                ),
+            ),
+            reg(
+                0x06,
+                "VGL Voltage",
+                max_value=0xFF,
+                value_mask=0xFF,
+                numeric_mask=0x3F,
+                default_value=0x08,
+                description="VIN_DISC and VGL[5:0], VGL range -5.4V to -18V",
+                bit_options=(
+                    bitopt("vin_disc", "VIN_DISC", 0x80),
+                ),
+            ),
+            reg(
+                0x07,
+                "VCORE Voltage",
+                max_value=0xFF,
+                value_mask=0xFF,
+                numeric_mask=0x3F,
+                default_value=0x14,
+                description="Inductor selection plus VCORE[5:0]",
+                bit_options=(
+                    bitopt("avdd_l_sel", "AVDD_L_SEL", 0x80),
+                    bitopt("avee_l_sel", "AVEE_L_SEL", 0x40),
+                ),
+            ),
+            reg(
+                0x08,
+                "VIO Voltage",
+                max_value=0xFF,
+                value_mask=0xFF,
+                numeric_mask=0x1F,
+                default_value=0x10,
+                description="Inductor selection, UBRR LDO enable and VIO[4:0]",
+                bit_options=(
+                    bitopt("vcore_l_sel", "VCORE_L_SEL", 0x80),
+                    bitopt("vio_l_sel", "VIO_L_SEL", 0x40),
+                    bitopt("en_ubrr_ldo", "UBRR LDO", 0x20),
+                ),
+            ),
+            reg(
+                0x09,
+                "LDO Voltage",
+                max_value=0xFF,
+                value_mask=0xFF,
+                numeric_mask=0x0F,
+                default_value=0x08,
+                description="UBRR routing plus LDO[3:0]",
+                bit_options=(
+                    bitopt("en_ubrr_reset1", "UBRR RESET1", 0x80),
+                    bitopt("en_ubrr_reset2", "UBRR RESET2", 0x40),
+                    bitopt("en_ubrr_vio", "UBRR VIO", 0x20),
+                    bitopt("en_ubrr_vcore", "UBRR VCORE", 0x10),
+                ),
+            ),
+            reg(
+                0x0B,
+                "VDET Voltage",
+                max_value=0x7F,
+                value_mask=0x7F,
+                numeric_mask=0x07,
+                default_value=0x02,
+                description="EN_RESET2, VDET2[6:4] and VDET[2:0]",
+                bit_options=(
+                    bitopt("en_reset2", "RESET2", 0x40),
+                ),
+            ),
             reg(0x0C, "GMA1 Voltage", max_value=0x3F, default_value=0x0A, description="GMA1 range AVDD to AVDD-1.26V"),
             reg(0x0D, "GMA2 Voltage", max_value=0x3F, default_value=0x0A, description="GMA2 range AVEE to AVEE+1.26V"),
             reg(0x0E, "AVDD Boost Config", default_value=0x61, description="LXA current limit, slew rate and frequency"),
@@ -695,6 +949,105 @@ PMIC_PROFILES: dict[str, PmicProfile] = {
         unlock_data=(0x65, 0x9A),
         mtp_action=MtpAction(name="Standard MTP Commit", callback=_mtp_standard_commit),
     ),
+    "rtq6749": PmicProfile(
+        key="rtq6749",
+        name="RTQ6749",
+        slave_addr=0xD6,
+        registers=(
+            reg(0x00, "PAVDD Voltage", max_value=0x2E, value_mask=0x3F, default_value=0x22, description="5.0V to 7.3V, 0.05V/step"),
+            reg(0x01, "NAVDD Voltage", max_value=0x2E, value_mask=0x3F, default_value=0x22, description="-5.0V to -7.3V, 0.05V/step"),
+            reg(0x02, "VGH Voltage", max_value=0x2E, value_mask=0x3F, default_value=0x06, description="7V to 30V, 0.5V/step"),
+            reg(0x03, "VGL Voltage", max_value=0x30, value_mask=0x3F, default_value=0x10, description="-6V to -18V, 0.25V/step"),
+            reg(0x04, "VCOM_C Voltage", max_value=0xFA, value_mask=0xFF, default_value=0x64, description="-3V to 2V, 0.02V/step"),
+            reg(0x05, "VGH Low Temperature", max_value=0x03, default_value=0x00, description="2V, 4V, 6V or 8V low-temperature compensation"),
+            reg(0x06, "Switching Frequency", max_value=0x03, default_value=0x00, description="600kHz, 800kHz, 1MHz or 2.2MHz"),
+            reg(0x07, "PAVDD On Delay", max_value=0x0F, default_value=0x01, description="0ms to 75ms, 5ms/step"),
+            reg(0x08, "PAVDD Soft Start", max_value=0x07, default_value=0x01, description="5ms to 40ms, 5ms/step"),
+            reg(0x09, "VGL On Delay", max_value=0x0F, default_value=0x05, description="0ms to 75ms, 5ms/step"),
+            reg(0x0A, "VGL Soft Start", max_value=0x07, default_value=0x02, description="3ms to 24ms, 3ms/step"),
+            reg(0x0B, "VGH On Delay", max_value=0x0F, default_value=0x05, description="0ms to 75ms, 5ms/step"),
+            reg(0x0C, "VGH Soft Start", max_value=0x03, default_value=0x01, description="5ms to 20ms, 5ms/step"),
+            reg(0x0D, "NAVDD On Delay", max_value=0x0F, default_value=0x03, description="0ms to 75ms, 5ms/step"),
+            reg(0x0E, "NAVDD Soft Start", max_value=0x07, default_value=0x01, description="5ms to 40ms, 5ms/step"),
+            reg(0x0F, "VCOM On Delay", max_value=0x0F, default_value=0x05, description="0ms to 75ms, 5ms/step"),
+            reg(0x10, "RESET On Delay", max_value=0x0F, default_value=0x01, description="0ms to 75ms, 5ms/step"),
+            reg(0x11, "Power Off Delay", max_value=0x0F, default_value=0x06, description="0ms to 45ms, 3ms/step"),
+            reg(
+                0x12,
+                "Option1",
+                default_value=0x06,
+                description="RESET sync, VIN detection and discharge options",
+                bit_options=(
+                    bitopt("reset_sync", "RESET Sync", 0x80, enabled_label="VGH Sync", disabled_label="Power-Off Delay"),
+                    bitopt("pavdd_discharge_off", "PAVDD Discharge", 0x10, enabled_label="Off", disabled_label="On"),
+                    bitopt("navdd_discharge_off", "NAVDD Discharge", 0x08, enabled_label="Off", disabled_label="On"),
+                    bitopt("vgh_discharge_off", "VGH Discharge", 0x04, enabled_label="Off", disabled_label="On"),
+                    bitopt("vgl_discharge_off", "VGL Discharge", 0x02, enabled_label="Off", disabled_label="On"),
+                    bitopt("vcom_discharge_off", "VCOM Discharge", 0x01, enabled_label="Off", disabled_label="On"),
+                ),
+            ),
+            reg(0x13, "Slew Rate Control", default_value=0x55, description="PAVDD/NAVDD/VGL/VGH slew-rate control"),
+            reg(
+                0x14,
+                "Option3",
+                default_value=0x00,
+                description="VGL topology, frequency spread and protection options",
+                bit_options=(
+                    bitopt("vgl_external", "VGL Topology", 0x20, enabled_label="External", disabled_label="Internal"),
+                    bitopt("otp_off", "OTP", 0x04, enabled_label="Off", disabled_label="On"),
+                    bitopt("uvp_off", "UVP", 0x02, enabled_label="Off", disabled_label="On"),
+                    bitopt("scp_off", "SCP", 0x01, enabled_label="Off", disabled_label="On"),
+                ),
+            ),
+            reg(
+                0x16,
+                "Channel ON/OFF Option",
+                max_value=0x3F,
+                default_value=0x3F,
+                description="Enable bits for RESET/VCOM/NAVDD/VGH/VGL/PAVDD",
+                supports_slider=False,
+                bit_options=(
+                    bitopt("en_reset", "RESET", 0x20),
+                    bitopt("en_vcom", "VCOM", 0x10),
+                    bitopt("en_navdd", "NAVDD", 0x08),
+                    bitopt("en_vgh", "VGH", 0x04),
+                    bitopt("en_vgl", "VGL", 0x02),
+                    bitopt("en_pavdd", "PAVDD", 0x01),
+                ),
+            ),
+            reg(0x17, "Auto Refresh Option", max_value=0x0F, default_value=0x02, description="FAULT behavior, refresh time and AR enable"),
+            reg(0x18, "PAVDD Off Delay", max_value=0x07, default_value=0x00, description="0ms to 14ms, 2ms/step"),
+            reg(0x19, "NAVDD Off Delay", max_value=0x07, default_value=0x00, description="0ms to 14ms, 2ms/step"),
+            reg(0x1A, "VGH Off Delay", max_value=0x07, default_value=0x00, description="0ms to 14ms, 2ms/step"),
+            reg(0x1B, "VGL Off Delay", max_value=0x07, default_value=0x00, description="0ms to 14ms, 2ms/step"),
+            reg(
+                0x1C,
+                "FAULT Clear / VCOM Off Delay",
+                max_value=0x0F,
+                default_value=0x00,
+                description="FAULT clear option plus VCOM off delay",
+                bit_options=(
+                    bitopt("fault_clear_en_low", "FAULT Clear", 0x08, enabled_label="Clear by EN Low", disabled_label="Not Clear"),
+                ),
+            ),
+            reg(0x1D, "Fault Analysis", max_value=0x0F, default_value=0x00, description="PAVDD/VGL/VGH/NAVDD fault flags", writable=False, supports_slider=False),
+            reg(0xFF, "Control Register", max_value=0x81, default_value=0x00, description="00 read DAC, 01 read MTP, 80 write DAC into MTP", writable=False),
+        ),
+        vcom=VcomDefinition(
+            name="VCOM_F",
+            device_addr=0x60,
+            register_addr=0x00,
+            min_value=0x00,
+            max_value=0xFF,
+            raw_shift=0,
+            dac_flag=0x00,
+            mtp_flag=0x00,
+            use_special_accessor=False,
+            no_register_access=False,
+        ),
+        mtp_action=MtpAction(name="RTQ6749 MTP Commit", callback=_mtp_rtq6749_commit),
+        mtp_read_mode="native",
+    ),
     "lx52042c": PmicProfile(
         key="lx52042c",
         name="LX52042C",
@@ -837,15 +1190,17 @@ PMIC_PROFILES: dict[str, PmicProfile] = {
 
 
 TCON_PROFILES: dict[str, TconProfile] = {
+    "i2c": TconProfile(
+        key="i2c",
+        name="Direct I2C",
+    ),
     "anx": TconProfile(
         key="anx",
         name="ANX",
-        adapter_class_name="ANX_ANX2176",
     ),
     "nova": TconProfile(
         key="nova",
         name="NOVA",
-        adapter_class_name="Nova_NT71877",
         needs_ready_sequence=True,
         ready_sequence=(
             InitStep(name="Enable AUX", callback=_step_nova_enable_aux),
@@ -854,16 +1209,15 @@ TCON_PROFILES: dict[str, TconProfile] = {
     "parade": TconProfile(
         key="parade",
         name="Parade",
-        adapter_class_name="Parade_TC3410",
     ),
 }
 
 
 GPU_CARD_IDS: dict[str, int] = {
+    "i2c": -1,
     "intel_edp": 0,
     "intel_dp": 1,
     "amd_edp": 2,
     "nvidia": 3,
-    "qualcomm": 5,
     "amd_dp": 6,
 }

@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+.venv/
+venv/
+env/
+
+# Nuitka / build outputs
+build/
+dist/
+*.build/
+*.dist/
+*.onefile-build/
+*.spec
+
+# Logs and temporary files
+*.log
+tmp_*.txt
+docs/
+circuit_project/
+
+# Local editor and OS files
+.idea/
+.vscode/
+*.swp
+*.swo
+Thumbs.db
+Desktop.ini

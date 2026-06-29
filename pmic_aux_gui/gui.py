@@ -8,7 +8,7 @@ from tkinter import messagebox
 import customtkinter as ctk
 
 from .profiles import GPU_CARD_IDS, NOVA_IIC_EN_SCHEMES, PMIC_PROFILES, TCON_PROFILES, RegisterDefinition, BitOptionDefinition
-from .service import AuxGuiError, SessionConfig, connect, default_paths, parse_hex_input, format_register_display, format_vcom_display
+from .service import AuxGuiError, SessionConfig, connect, default_i2c_paths, enumerate_gpu_aux_port_choices, parse_hex_input, format_register_display, format_vcom_display
 
 
 ctk.set_appearance_mode("System")
@@ -49,11 +49,6 @@ class RegisterPageState:
 
 class PmicAuxGuiApp(ctk.CTk):
     REFRESH_DEBOUNCE_MS = 24
-    COLLAPSIBLE_REGISTER_NAMES = {
-        "channel setting 0",
-        "channel setting 1",
-        "channel discharge setting",
-    }
     DISPLAY_DEPENDENCIES = {
         "nvp2515": {
             "reg_01": ("reg_05",),
@@ -69,7 +64,7 @@ class PmicAuxGuiApp(ctk.CTk):
         },
         "nt50805": {
             "reg_01": ("reg_05",),
-            "reg_03": ("reg_0C",),
+            "reg_03": ("reg_0C", "__vcom__"),
             "reg_04": ("reg_0D",),
             "reg_1C": ("__vcom__",),
         },
@@ -78,6 +73,9 @@ class PmicAuxGuiApp(ctk.CTk):
             "reg_05": ("reg_0E",),
             "reg_06": ("reg_0F",),
             "reg_0C": ("__vcom__",),
+        },
+        "rtq6749": {
+            "reg_04": ("__vcom__",),
         },
         "lx52042c": {
             "reg_01": ("reg_05",),
@@ -99,7 +97,7 @@ class PmicAuxGuiApp(ctk.CTk):
         self._pending_row_refreshes: set[str] = set()
         self._pending_vcom_refresh = False
         self._refresh_after_id: str | None = None
-        self.default_dll_path, self.default_operate_path = default_paths(base_dir)
+        self.default_jtool_dll_path, self.default_jtool_path = default_i2c_paths(base_dir)
         self.title("PMIC AUX Debug GUI")
         self.geometry("1500x920")
         self.minsize(1280, 760)
@@ -111,6 +109,8 @@ class PmicAuxGuiApp(ctk.CTk):
         self.pmic_addr_var = tk.StringVar(value=f"{PMIC_PROFILES['nt50805'].slave_addr:02X}")
         self.nova_iic_en_var = tk.BooleanVar(value=False)
         self.nova_iic_en_scheme_var = tk.StringVar(value="IO1")
+        self.display_port_var = tk.StringVar(value="Auto first display")
+        self.display_port_choices = {}
         self.status_var = tk.StringVar(value="Disconnected")
         self.init_var = tk.StringVar(value="Not initialized")
         self.vcom_title_var = tk.StringVar(value="VCOM")
@@ -122,6 +122,7 @@ class PmicAuxGuiApp(ctk.CTk):
 
         self._build_layout()
         self.after(1, self._reload_register_rows)
+        self.after(10, self._refresh_display_ports)
         self._sync_nova_toggle()
         self.protocol("WM_DELETE_WINDOW", self._on_close)
 
@@ -144,9 +145,11 @@ class PmicAuxGuiApp(ctk.CTk):
             top.grid_columnconfigure(index, weight=1 if index in (1, 3, 5, 8) else 0)
 
         ctk.CTkLabel(top, text="GPU / CardID").grid(row=0, column=0, padx=8, pady=8, sticky="w")
-        ctk.CTkOptionMenu(top, values=list(GPU_CARD_IDS.keys()), variable=self.gpu_var).grid(row=0, column=1, padx=8, pady=8, sticky="ew")
+        self.gpu_menu = ctk.CTkOptionMenu(top, values=list(GPU_CARD_IDS.keys()), variable=self.gpu_var, command=lambda _v: self._on_gpu_change())
+        self.gpu_menu.grid(row=0, column=1, padx=8, pady=8, sticky="ew")
         ctk.CTkLabel(top, text="TCON").grid(row=0, column=2, padx=8, pady=8, sticky="w")
-        ctk.CTkOptionMenu(top, values=list(TCON_PROFILES.keys()), variable=self.tcon_var, command=lambda _v: self._reload_register_rows()).grid(row=0, column=3, padx=8, pady=8, sticky="ew")
+        self.tcon_menu = ctk.CTkOptionMenu(top, values=[key for key in TCON_PROFILES if key != "i2c"], variable=self.tcon_var, command=lambda _v: self._reload_register_rows())
+        self.tcon_menu.grid(row=0, column=3, padx=8, pady=8, sticky="ew")
         ctk.CTkLabel(top, text="PMIC").grid(row=0, column=4, padx=8, pady=8, sticky="w")
         ctk.CTkOptionMenu(top, values=list(PMIC_PROFILES.keys()), variable=self.pmic_var, command=self._on_pmic_change).grid(row=0, column=5, padx=8, pady=8, sticky="ew")
         ctk.CTkLabel(top, text="PMIC Addr").grid(row=0, column=6, padx=(8, 4), pady=8, sticky="w")
@@ -170,10 +173,14 @@ class PmicAuxGuiApp(ctk.CTk):
         ctk.CTkButton(top, text="Connect", command=self._connect).grid(row=0, column=9, padx=8, pady=8, sticky="ew")
         ctk.CTkButton(top, text="Disconnect", command=self._disconnect).grid(row=0, column=10, padx=8, pady=8, sticky="ew")
 
-        ctk.CTkLabel(top, text="Status").grid(row=1, column=0, padx=8, pady=(0, 8), sticky="w")
-        ctk.CTkLabel(top, textvariable=self.status_var, anchor="w").grid(row=1, column=1, columnspan=3, padx=8, pady=(0, 8), sticky="ew")
-        ctk.CTkLabel(top, text="Init").grid(row=1, column=4, padx=8, pady=(0, 8), sticky="w")
-        ctk.CTkLabel(top, textvariable=self.init_var, anchor="w").grid(row=1, column=5, columnspan=4, padx=8, pady=(0, 8), sticky="ew")
+        ctk.CTkLabel(top, text="Display").grid(row=1, column=0, padx=8, pady=(0, 8), sticky="w")
+        self.display_port_menu = ctk.CTkOptionMenu(top, values=[self.display_port_var.get()], variable=self.display_port_var)
+        self.display_port_menu.grid(row=1, column=1, columnspan=5, padx=8, pady=(0, 8), sticky="ew")
+        ctk.CTkButton(top, text="Refresh", command=self._refresh_display_ports).grid(row=1, column=6, padx=8, pady=(0, 8), sticky="ew")
+        ctk.CTkLabel(top, text="Status").grid(row=1, column=7, padx=8, pady=(0, 8), sticky="w")
+        ctk.CTkLabel(top, textvariable=self.status_var, anchor="w").grid(row=1, column=8, padx=8, pady=(0, 8), sticky="ew")
+        ctk.CTkLabel(top, text="Init").grid(row=1, column=9, padx=8, pady=(0, 8), sticky="w")
+        ctk.CTkLabel(top, textvariable=self.init_var, anchor="w").grid(row=1, column=10, columnspan=2, padx=8, pady=(0, 8), sticky="ew")
 
         middle = ctk.CTkFrame(self, corner_radius=14)
         middle.grid(row=1, column=0, sticky="nsew", padx=12, pady=8)
@@ -191,25 +198,25 @@ class PmicAuxGuiApp(ctk.CTk):
         right.grid_rowconfigure(1, weight=1)
         right.grid_propagate(False)
 
-        vcom_frame = ctk.CTkFrame(right)
-        vcom_frame.grid(row=0, column=0, sticky="ew", padx=10, pady=10)
-        vcom_frame.grid_columnconfigure(1, weight=1)
+        self.vcom_frame = ctk.CTkFrame(right)
+        self.vcom_frame.grid(row=0, column=0, sticky="ew", padx=10, pady=10)
+        self.vcom_frame.grid_columnconfigure(1, weight=1)
         for index in range(2):
-            vcom_frame.grid_columnconfigure(index, weight=1)
-        ctk.CTkLabel(vcom_frame, textvariable=self.vcom_title_var, font=ctk.CTkFont(size=18, weight="bold")).grid(row=0, column=0, sticky="w", padx=8, pady=(8, 2))
-        ctk.CTkLabel(vcom_frame, textvariable=self.vcom_actual_var, anchor="e").grid(row=0, column=1, padx=8, pady=(8, 2), sticky="e")
-        ctk.CTkLabel(vcom_frame, text="Value").grid(row=1, column=0, padx=8, pady=(4, 6), sticky="w")
-        ctk.CTkEntry(vcom_frame, textvariable=self.vcom_var).grid(row=1, column=1, padx=8, pady=(4, 6), sticky="ew")
-        self.vcom_split_frame = ctk.CTkFrame(vcom_frame, fg_color="transparent")
+            self.vcom_frame.grid_columnconfigure(index, weight=1)
+        ctk.CTkLabel(self.vcom_frame, textvariable=self.vcom_title_var, font=ctk.CTkFont(size=18, weight="bold")).grid(row=0, column=0, sticky="w", padx=8, pady=(8, 2))
+        ctk.CTkLabel(self.vcom_frame, textvariable=self.vcom_actual_var, anchor="e").grid(row=0, column=1, padx=8, pady=(8, 2), sticky="e")
+        ctk.CTkLabel(self.vcom_frame, text="Value").grid(row=1, column=0, padx=8, pady=(4, 6), sticky="w")
+        ctk.CTkEntry(self.vcom_frame, textvariable=self.vcom_var).grid(row=1, column=1, padx=8, pady=(4, 6), sticky="ew")
+        self.vcom_split_frame = ctk.CTkFrame(self.vcom_frame, fg_color="transparent")
         self.vcom_split_frame.grid(row=2, column=0, columnspan=2, sticky="ew", padx=8, pady=(0, 2))
         self.vcom_split_frame.grid_columnconfigure(1, weight=1)
         ctk.CTkLabel(self.vcom_split_frame, text="VCOM coarse").grid(row=0, column=0, sticky="w", padx=(0, 8), pady=(2, 0))
         ctk.CTkLabel(self.vcom_split_frame, textvariable=self.vcom_coarse_var, anchor="e").grid(row=0, column=1, sticky="e", pady=(2, 0))
         ctk.CTkLabel(self.vcom_split_frame, text="VCOM_LSB").grid(row=1, column=0, sticky="w", padx=(0, 8), pady=(2, 0))
         ctk.CTkLabel(self.vcom_split_frame, textvariable=self.vcom_lsb_var, anchor="e").grid(row=1, column=1, sticky="e", pady=(2, 0))
-        self.vcom_slider = ctk.CTkSlider(vcom_frame, from_=0, to=255, number_of_steps=255, variable=self.vcom_slider_var, command=self._on_vcom_slider)
+        self.vcom_slider = ctk.CTkSlider(self.vcom_frame, from_=0, to=255, number_of_steps=255, variable=self.vcom_slider_var, command=self._on_vcom_slider)
         self.vcom_slider.grid(row=3, column=0, columnspan=2, padx=8, pady=(2, 8), sticky="ew")
-        actions = ctk.CTkFrame(vcom_frame, fg_color="transparent")
+        actions = ctk.CTkFrame(self.vcom_frame, fg_color="transparent")
         actions.grid(row=4, column=0, columnspan=2, sticky="ew", padx=8, pady=(0, 8))
         for index in range(4):
             actions.grid_columnconfigure(index % 2, weight=1)
@@ -234,13 +241,17 @@ class PmicAuxGuiApp(ctk.CTk):
         ctk.CTkButton(bottom, text="Write All DAC", command=lambda: self._write_all_registers("dac")).grid(row=0, column=1, padx=8, pady=8, sticky="ew")
         ctk.CTkButton(bottom, text="Read All MTP", command=lambda: self._read_all_registers("mtp")).grid(row=0, column=2, padx=8, pady=8, sticky="ew")
         ctk.CTkButton(bottom, text="Write All MTP", command=lambda: self._write_all_registers("mtp")).grid(row=0, column=3, padx=8, pady=8, sticky="ew")
-        ctk.CTkButton(bottom, text="Refresh Register UI", command=self._refresh_current_register_ui).grid(row=0, column=4, padx=8, pady=8, sticky="ew")
+        ctk.CTkButton(bottom, text="Clear Log", command=self._clear_log).grid(row=0, column=4, padx=8, pady=8, sticky="ew")
         self.vcom_var.trace_add("write", lambda *_args: self._refresh_vcom_display())
 
     def _reload_register_rows(self) -> None:
-        self._sync_nova_toggle()
+        self._sync_i2c_mode()
         profile = PMIC_PROFILES[self.pmic_var.get()]
-        self.vcom_slider.configure(from_=profile.vcom.min_value, to=profile.vcom.max_value, number_of_steps=profile.vcom.max_value - profile.vcom.min_value)
+        if profile.supports_vcom:
+            self.vcom_frame.grid()
+            self.vcom_slider.configure(from_=profile.vcom.min_value, to=profile.vcom.max_value, number_of_steps=max(1, profile.vcom.max_value - profile.vcom.min_value))
+        else:
+            self.vcom_frame.grid_remove()
         self._sync_vcom_split_visibility(profile)
         self._sync_vcom_title(profile)
         self._show_register_page(self.pmic_var.get())
@@ -333,7 +344,7 @@ class PmicAuxGuiApp(ctk.CTk):
     def _create_register_row(self, page: RegisterPageState, profile, register: RegisterDefinition, grid_row: int) -> None:
         row = ctk.CTkFrame(page.frame)
         row.grid(row=grid_row, column=0, sticky="ew", padx=6, pady=4)
-        for index in range(5):
+        for index in range(6):
             row.grid_columnconfigure(index, weight=1 if index in (2, 3) else 0)
         initial_value = register.default_value if register.default_value is not None else register.min_value
         raw_value_var = tk.StringVar(value=f"0x{initial_value:02X}")
@@ -362,15 +373,15 @@ class PmicAuxGuiApp(ctk.CTk):
         display_text = format_register_display(profile, register.key, initial_value, {register.key: initial_value})
         if register.bit_options and not numeric_mask:
             display_text = ""
-        current_label = ctk.CTkLabel(row, text=display_text, width=180)
-        current_label.grid(row=0, column=4, padx=6, pady=6, sticky="w")
+        current_label = ctk.CTkLabel(row, text=display_text, width=110, anchor="e")
+        current_label.grid(row=0, column=4, padx=6, pady=6, sticky="e")
         bit_option_vars: dict[str, tk.StringVar] = {}
         options_frame: ctk.CTkFrame | None = None
         toggle_button: ctk.CTkButton | None = None
-        collapsed = bool(register.bit_options and self._is_default_collapsed_register(register))
+        collapsed = bool(register.bit_options)
         if register.bit_options:
             options_frame = ctk.CTkFrame(row, fg_color="transparent")
-            options_frame.grid(row=1, column=0, columnspan=5, padx=6, pady=(0, 6), sticky="ew")
+            options_frame.grid(row=1, column=0, columnspan=6, padx=6, pady=(0, 6), sticky="ew")
             option_columns = 2 if len(register.bit_options) <= 4 else 3
             for column in range(option_columns):
                 options_frame.grid_columnconfigure(column, weight=1, uniform=f"{register.key}_opts")
@@ -406,7 +417,7 @@ class PmicAuxGuiApp(ctk.CTk):
                 height=28,
                 command=lambda key=register.key: self._toggle_register_options(key),
             )
-            toggle_button.grid(row=0, column=4, padx=6, pady=6, sticky="e")
+            toggle_button.grid(row=0, column=5, padx=6, pady=6, sticky="e")
         if not register.writable:
             if entry is not None:
                 entry.configure(state="disabled")
@@ -451,34 +462,92 @@ class PmicAuxGuiApp(ctk.CTk):
         else:
             self._refresh_vcom_display(page.current_values.copy())
 
-    def _is_collapsible_register(self, definition: RegisterDefinition) -> bool:
-        if self.pmic_var.get() == "lx52042c" and definition.bit_options:
-            return True
-        return definition.name.strip().lower() in self.COLLAPSIBLE_REGISTER_NAMES
-
-    def _is_default_collapsed_register(self, definition: RegisterDefinition) -> bool:
-        return self._is_collapsible_register(definition)
-
     def log(self, message: str) -> None:
         self.log_box.insert("end", f"{message}\n")
         self.log_box.see("end")
+
+    def _clear_log(self) -> None:
+        self.log_box.delete("1.0", "end")
+
+    def _on_gpu_change(self) -> None:
+        self._sync_i2c_mode()
+        self._refresh_display_ports()
+
+    def _refresh_display_ports(self) -> None:
+        gpu_key = self.gpu_var.get()
+        if gpu_key == "i2c":
+            label = "Direct I2C"
+            self.display_port_choices = {}
+            self.display_port_var.set(label)
+            self.display_port_menu.configure(values=[label], state="disabled")
+            return
+        try:
+            choices = enumerate_gpu_aux_port_choices(gpu_key)
+        except Exception as exc:
+            label = f"Enumeration failed: {exc}"
+            self.display_port_choices = {}
+            self.display_port_var.set(label)
+            self.display_port_menu.configure(values=[label], state="disabled")
+            self.log(label)
+            return
+        if not choices:
+            label = "No matching display"
+            self.display_port_choices = {}
+            self.display_port_var.set(label)
+            self.display_port_menu.configure(values=[label], state="disabled")
+            self.log(f"No {gpu_key} display found")
+            return
+        previous = self.display_port_var.get()
+        self.display_port_choices = {choice.label: choice for choice in choices}
+        labels = list(self.display_port_choices)
+        self.display_port_var.set(previous if previous in self.display_port_choices else labels[0])
+        self.display_port_menu.configure(values=labels, state="normal")
+        self.log(f"Found {len(labels)} display(s) for {gpu_key}")
+
+    def _selected_display_indices(self) -> tuple[int, int]:
+        if self.gpu_var.get() == "i2c":
+            return 0, 0
+        choice = self.display_port_choices.get(self.display_port_var.get())
+        if choice is None:
+            self._refresh_display_ports()
+            choice = self.display_port_choices.get(self.display_port_var.get())
+        if choice is None:
+            raise AuxGuiError("Please select a valid display port")
+        return choice.gpu_index, choice.port_index
 
     def _current_config(self) -> SessionConfig:
         pmic_addr = parse_hex_input(f"0x{self.pmic_addr_var.get().strip()}")
         if not 0x00 <= pmic_addr <= 0xFF:
             raise AuxGuiError("PMIC address must be in range 0x00 to 0xFF")
+        gpu_index, port_index = self._selected_display_indices()
         return SessionConfig(
             gpu_key=self.gpu_var.get(),
-            tcon_key=self.tcon_var.get(),
+            tcon_key="i2c" if self.gpu_var.get() == "i2c" else self.tcon_var.get(),
             pmic_key=self.pmic_var.get(),
             pmic_slave_addr=pmic_addr,
-            dll_path=self.default_dll_path,
-            operate_module_path=self.default_operate_path,
+            gpu_index=gpu_index,
+            port_index=port_index,
+            jtool_dll_path=self.default_jtool_dll_path,
+            jtool_module_path=self.default_jtool_path,
             nova_use_iic_en=bool(self.nova_iic_en_var.get()),
             nova_iic_en_scheme=self._nova_iic_en_scheme_key(),
         )
 
+    def _sync_i2c_mode(self) -> None:
+        if self.gpu_var.get() == "i2c":
+            self.tcon_menu.configure(state="disabled")
+            self.nova_iic_en_var.set(False)
+            self.nova_iic_en_switch.configure(state="disabled")
+            self.nova_iic_en_scheme_menu.configure(state="disabled")
+            self.display_port_menu.configure(state="disabled")
+        else:
+            self.tcon_menu.configure(state="normal")
+            self.display_port_menu.configure(state="normal")
+            self._sync_nova_toggle()
+
     def _sync_nova_toggle(self) -> None:
+        if self.gpu_var.get() == "i2c":
+            return
         if self.tcon_var.get() == "nova":
             self.nova_iic_en_switch.configure(state="normal")
             self.nova_iic_en_scheme_menu.configure(state="normal")
@@ -555,7 +624,9 @@ class PmicAuxGuiApp(ctk.CTk):
     def _read_vcom(self, target: str) -> None:
         try:
             session = self._require_session()
-            value = session.read_vcom(target=target)
+            if not session.pmic_profile.supports_vcom:
+                raise AuxGuiError(f"{session.pmic_profile.name} does not support VCOM")
+            value = session.read_vcom(target=target, device_addr=self._vcom_device_addr_for_profile(session.pmic_profile))
             width = 3 if session.pmic_profile.key == "lx52042c" else 2
             self.vcom_var.set(f"0x{value:0{width}X}")
             self.vcom_slider_var.set(value)
@@ -569,8 +640,10 @@ class PmicAuxGuiApp(ctk.CTk):
     def _write_vcom(self, target: str) -> None:
         try:
             session = self._require_session()
+            if not session.pmic_profile.supports_vcom:
+                raise AuxGuiError(f"{session.pmic_profile.name} does not support VCOM")
             value = parse_hex_input(self.vcom_var.get())
-            session.write_vcom(value, target=target)
+            session.write_vcom(value, target=target, device_addr=self._vcom_device_addr_for_profile(session.pmic_profile))
             self.vcom_slider_var.set(value)
             self._refresh_vcom_display()
             self.init_var.set(session.init_summary)
@@ -629,7 +702,7 @@ class PmicAuxGuiApp(ctk.CTk):
             row.value_label.configure(text="--")
             return
         clamped_value = self._normalize_register_value(row.definition, value)
-        numeric_value = clamped_value & row.numeric_mask if row.numeric_mask else None
+        numeric_value = self._numeric_value_from_raw(row.definition, clamped_value, row.numeric_mask)
         if row.slider is not None and numeric_value is not None and row.slider_var.get() != numeric_value:
             row.slider_var.set(numeric_value)
         if row.editor_var is not None and numeric_value is not None:
@@ -729,6 +802,8 @@ class PmicAuxGuiApp(ctk.CTk):
     def _numeric_mask(self, definition: RegisterDefinition) -> int:
         if not definition.supports_slider:
             return 0
+        if definition.numeric_mask is not None:
+            return definition.numeric_mask
         logic_mask = 0
         for option in definition.bit_options:
             logic_mask |= option.bit_mask
@@ -741,6 +816,13 @@ class PmicAuxGuiApp(ctk.CTk):
 
     def _format_numeric_value(self, value: int) -> str:
         return f"0x{value:02X}"
+
+    def _numeric_value_from_raw(self, definition: RegisterDefinition, value: int, numeric_mask: int) -> int | None:
+        if not numeric_mask:
+            return None
+        if definition.value_mask is not None and definition.numeric_mask is None and not definition.bit_options:
+            return value
+        return value & numeric_mask
 
     def _current_numeric_value(self, row: RegisterRowState) -> int | None:
         if row.editor_var is None:
@@ -756,7 +838,10 @@ class PmicAuxGuiApp(ctk.CTk):
         if current_raw is None:
             current_raw = row.definition.default_value if row.definition.default_value is not None else row.definition.min_value
         current_raw = self._normalize_register_value(row.definition, current_raw)
-        next_raw = (current_raw & ~row.numeric_mask) | (numeric_value & row.numeric_mask)
+        if row.definition.value_mask is not None and row.definition.numeric_mask is None and not row.definition.bit_options:
+            next_raw = numeric_value
+        else:
+            next_raw = (current_raw & ~row.numeric_mask) | (numeric_value & row.numeric_mask)
         page = self._current_register_page()
         if page is not None:
             page.current_values[reg_key] = next_raw
@@ -791,14 +876,21 @@ class PmicAuxGuiApp(ctk.CTk):
         self.vcom_var.set(f"0x{int(round(value)):0{width}X}")
 
     def _refresh_vcom_display(self, current_values: dict[str, int] | None = None) -> None:
+        profile = PMIC_PROFILES[self.pmic_var.get()]
+        current_values = current_values or self._current_values_snapshot()
+        self._sync_vcom_title(profile, current_values)
+        if not profile.supports_vcom:
+            self.vcom_actual_var.set("Unsupported")
+            self.vcom_coarse_var.set("--")
+            self.vcom_lsb_var.set("--")
+            return
         value = self._try_parse_row_value(self.vcom_var.get())
         if value is None:
             self.vcom_actual_var.set("--")
             self.vcom_coarse_var.set("--")
             self.vcom_lsb_var.set("--")
             return
-        profile = PMIC_PROFILES[self.pmic_var.get()]
-        self.vcom_actual_var.set(format_vcom_display(profile, value, current_values or self._current_values_snapshot()))
+        self.vcom_actual_var.set(format_vcom_display(profile, value, current_values))
         if profile.key == "lx52042c":
             coarse = (value >> 3) & 0xFF
             lsb = value & 0x07
@@ -809,21 +901,43 @@ class PmicAuxGuiApp(ctk.CTk):
             self.vcom_lsb_var.set("--")
 
     def _sync_vcom_split_visibility(self, profile) -> None:
-        if profile.key == "lx52042c":
+        if profile.supports_vcom and profile.key == "lx52042c":
             self.vcom_split_frame.grid()
         else:
             self.vcom_split_frame.grid_remove()
 
-    def _sync_vcom_title(self, profile) -> None:
+    def _sync_vcom_title(self, profile, current_values: dict[str, int] | None = None) -> None:
+        if profile.key == "nt50805":
+            _, write_addr = self._nt50805_vcom_addresses(current_values)
+            self.vcom_title_var.set(f"{profile.vcom.name} (D-VCOM 0x{write_addr:02X})")
+            return
+        if profile.key == "rtq6749":
+            self.vcom_title_var.set(f"{profile.vcom.name} (0x{profile.vcom.device_addr:02X})")
+            return
         self.vcom_title_var.set(profile.vcom.name)
+
+    def _nt50805_vcom_addresses(self, current_values: dict[str, int] | None = None) -> tuple[int, int]:
+        current_values = current_values or self._current_values_snapshot()
+        reg03 = current_values.get("reg_03", 0x00)
+        write_addr = 0x9A if reg03 & 0x80 else 0x9E
+        return write_addr >> 1, write_addr
+
+    def _vcom_device_addr_for_profile(self, profile) -> int | None:
+        if profile.key == "nt50805":
+            _, write_addr = self._nt50805_vcom_addresses()
+            return write_addr
+        return None
 
     def _allowed_value_mask(self, definition: RegisterDefinition) -> int:
         logic_mask = 0
         for option in definition.bit_options:
             logic_mask |= option.bit_mask
         numeric_mask = self._numeric_mask(definition)
-        allowed_mask = logic_mask | numeric_mask
-        if not definition.bit_options:
+        if definition.value_mask is not None:
+            allowed_mask = definition.value_mask
+        elif definition.bit_options:
+            allowed_mask = logic_mask | numeric_mask
+        else:
             allowed_mask = definition.max_value
         return allowed_mask
 

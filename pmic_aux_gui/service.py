@@ -17,8 +17,27 @@ import traceback
 from .profiles import GPU_CARD_IDS, NOVA_IIC_EN_SCHEMES, PMIC_PROFILES, TCON_PROFILES, PmicProfile, TconProfile, _step_nova_iic_en
 
 
+GPU_AUX_TARGETS: dict[str, tuple[str, str]] = {
+    "intel_edp": ("INTEL", "eDP"),
+    "intel_dp": ("INTEL", "DP"),
+    "amd_edp": ("AMD", "eDP"),
+    "amd_dp": ("AMD", "DP"),
+    "nvidia": ("NVIDIA", "DP"),
+}
+
+
 class AuxGuiError(RuntimeError):
     """User-facing hardware/service error."""
+
+
+@dataclass(frozen=True)
+class GpuAuxPortChoice:
+    label: str
+    backend: str
+    kind: str
+    gpu_index: int
+    port_index: int
+    identity: str
 
 
 @dataclass
@@ -27,8 +46,10 @@ class SessionConfig:
     tcon_key: str
     pmic_key: str
     pmic_slave_addr: int
-    dll_path: Path
-    operate_module_path: Path
+    gpu_index: int = 0
+    port_index: int = 0
+    jtool_dll_path: Path | None = None
+    jtool_module_path: Path | None = None
     nova_use_iic_en: bool = False
     nova_iic_en_scheme: str = "io1"
 
@@ -137,7 +158,7 @@ class LocalAuxSession:
             except Exception as exc:
                 results[register.key] = f"ERROR: {exc}"
                 self.logger(f"Read all failed at {register.name}: {exc}")
-        if not exclude_vcom:
+        if not exclude_vcom and self.pmic_profile.supports_vcom:
             results["vcom"] = self.read_vcom()
         return results
 
@@ -158,63 +179,101 @@ class LocalAuxSession:
         if target == "mtp" and wrote_any:
             self.run_mtp_commit()
 
-    def read_vcom(self, target: str = "dac") -> int:
+    def read_vcom(self, target: str = "dac", device_addr: int | None = None) -> int:
+        if not self.pmic_profile.supports_vcom:
+            raise AuxGuiError(f"{self.pmic_profile.name} does not support VCOM")
         self.ensure_ready()
         self._ensure_pmic_unlock()
         if target == "mtp" and self.pmic_profile.mtp_read_mode == "fallback_to_dac":
             self.logger("MTP VCOM read falls back to DAC path")
         try:
+            vcom_device_addr = self._resolve_vcom_device_addr(device_addr)
             if self.pmic_profile.key == "lx52042c":
                 return self._read_lx_vcom_via_pmic(target)
-            if self.pmic_profile.vcom.use_special_accessor and hasattr(self.card_lib, "read_vcom"):
+            if self.pmic_profile.key == "rtq6749":
+                return self._read_rtq6749_vcom(target, vcom_device_addr)
+            if self.pmic_profile.key == "nt50805" and device_addr is not None and hasattr(self.card_lib, "read_vcom"):
+                raw_value = self._read_vcom_with_addr(vcom_device_addr)
+            elif device_addr is None and self.pmic_profile.vcom.use_special_accessor and hasattr(self.card_lib, "read_vcom"):
                 raw_value = int(self.card_lib.read_vcom())
             elif self.pmic_profile.vcom.no_register_access:
                 self._prepare_vcom_access()
-                read_addr = self.pmic_profile.vcom.read_device_addr or self.pmic_profile.vcom.device_addr
+                read_addr = self.pmic_profile.vcom.read_device_addr or vcom_device_addr
                 raw_value = int(self.card_lib.iic_read_s(read_addr))
             else:
                 raw_value = int(
                     self.card_lib.iic_over_aux_read(
-                        self.pmic_profile.vcom.device_addr,
+                        vcom_device_addr,
                         self.pmic_profile.vcom.register_addr,
                         1,
                     )[0]
                 )
             value = raw_value >> self.pmic_profile.vcom.raw_shift
-            self.logger(f"Read {self.pmic_profile.vcom.name} raw=0x{raw_value:02X} logical=0x{value:02X}")
+            self.logger(f"Read {self.pmic_profile.vcom.name}: addr=0x{vcom_device_addr:02X} raw=0x{raw_value:02X} logical=0x{value:02X}")
             return value
         except Exception as exc:
             raise AuxGuiError(f"Read VCOM failed: {exc}") from exc
 
-    def write_vcom(self, value: int, target: str = "dac") -> None:
+    def write_vcom(self, value: int, target: str = "dac", device_addr: int | None = None) -> None:
+        if not self.pmic_profile.supports_vcom:
+            raise AuxGuiError(f"{self.pmic_profile.name} does not support VCOM")
         validate_register_value(self.pmic_profile.vcom.min_value, self.pmic_profile.vcom.max_value, value)
         self.ensure_ready()
         self._ensure_pmic_unlock()
         try:
+            vcom_device_addr = self._resolve_vcom_device_addr(device_addr)
             if self.pmic_profile.key == "lx52042c":
                 self._write_lx_vcom_via_pmic(value, target)
+                return
+            if self.pmic_profile.key == "rtq6749":
+                self._write_rtq6749_vcom(value, target, vcom_device_addr)
                 return
             raw_value = value << self.pmic_profile.vcom.raw_shift
             if target == "dac":
                 raw_value |= self.pmic_profile.vcom.dac_flag
             else:
                 raw_value |= self.pmic_profile.vcom.mtp_flag
-            if self.pmic_profile.vcom.use_special_accessor and hasattr(self.card_lib, "write_vcom"):
+            if self.pmic_profile.key == "nt50805" and device_addr is not None and hasattr(self.card_lib, "write_vcom"):
+                self._write_vcom_with_addr(raw_value, vcom_device_addr)
+            elif device_addr is None and self.pmic_profile.vcom.use_special_accessor and hasattr(self.card_lib, "write_vcom"):
                 self.card_lib.write_vcom(raw_value)
             elif self.pmic_profile.vcom.no_register_access:
                 self._prepare_vcom_access()
-                self.card_lib.iic_write_s(self.pmic_profile.vcom.device_addr, raw_value)
+                self.card_lib.iic_write_s(vcom_device_addr, raw_value)
             else:
                 self.card_lib.iic_over_aux_write(
-                    self.pmic_profile.vcom.device_addr,
+                    vcom_device_addr,
                     self.pmic_profile.vcom.register_addr,
                     [raw_value],
                 )
-            self.logger(f"Write {self.pmic_profile.vcom.name} logical=0x{value:02X} raw=0x{raw_value:02X}")
+            self.logger(f"Write {self.pmic_profile.vcom.name}: addr=0x{vcom_device_addr:02X} logical=0x{value:02X} raw=0x{raw_value:02X}")
             if target == "mtp":
                 self.logger(f"{self.pmic_profile.vcom.name} MTP write uses device-specific command bit; no extra PMIC MTP commit applied")
         except Exception as exc:
             raise AuxGuiError(f"Write VCOM failed: {exc}") from exc
+
+    def _resolve_vcom_device_addr(self, device_addr: int | None = None) -> int:
+        if device_addr is None:
+            return self.pmic_profile.vcom.device_addr
+        validate_register_value(0x00, 0xFF, device_addr)
+        return device_addr
+
+    def _read_vcom_with_addr(self, vcom_addr: int) -> int:
+        try:
+            return int(self.card_lib.read_vcom(vcom_addr))
+        except TypeError as exc:
+            if vcom_addr == self.pmic_profile.vcom.device_addr:
+                return int(self.card_lib.read_vcom())
+            raise AuxGuiError("Current AUX adapter read_vcom() does not accept a VCOM address parameter") from exc
+
+    def _write_vcom_with_addr(self, raw_value: int, vcom_addr: int) -> None:
+        try:
+            self.card_lib.write_vcom(raw_value, vcom_addr)
+        except TypeError as exc:
+            if vcom_addr == self.pmic_profile.vcom.device_addr:
+                self.card_lib.write_vcom(raw_value)
+                return
+            raise AuxGuiError("Current AUX adapter write_vcom() does not accept a VCOM address parameter") from exc
 
     def _prepare_vcom_access(self) -> None:
         for step in self.tcon_profile.ready_sequence:
@@ -223,25 +282,53 @@ class LocalAuxSession:
             _step_nova_iic_en(self.card_lib, self.logger, self.config.nova_iic_en_scheme)
 
     def _prepare_register_read(self, register, target: str) -> None:
-        if self.pmic_profile.key != "b602":
+        if self.pmic_profile.key not in {"b602", "b802", "rtq6749"}:
             return
         if register.address in {0xFE, 0xFF}:
             return
         red_value = 0x01 if target == "mtp" else 0x00
+        label = self.pmic_profile.name
         self.logger(
-            f"B602 prepare read: target={target.upper()} slave=0x{self.pmic_profile.slave_addr:02X} "
+            f"{label} prepare read: target={target.upper()} slave=0x{self.pmic_profile.slave_addr:02X} "
             f"select_reg=0xFF value=0x{red_value:02X} next_reg=0x{register.address:02X}"
         )
         self.card_lib.iic_over_aux_write(self.pmic_profile.slave_addr, 0xFF, [red_value])
         self.logger(
-            f"B602 register read source: slave=0x{self.pmic_profile.slave_addr:02X} "
+            f"{label} register read source: slave=0x{self.pmic_profile.slave_addr:02X} "
             f"reg=0xFF <- 0x{red_value:02X}"
         )
         time.sleep(0.01)
         self.logger(
-            f"B602 register read command: slave=0x{self.pmic_profile.slave_addr:02X} "
+            f"{label} register read command: slave=0x{self.pmic_profile.slave_addr:02X} "
             f"reg=0x{register.address:02X} after source select delay=10ms"
         )
+
+    def _read_rtq6749_vcom(self, target: str, vcom_addr: int) -> int:
+        select_value = 0x00 if target == "mtp" else 0x80
+        if self.config.tcon_key == "i2c":
+            self.card_lib.iic_write(vcom_addr, 0x02, bytes([select_value]))
+            self.logger(f"RTQ6749 VCOM_F I2C read source: slave=0x{vcom_addr:02X} reg=0x02 <- 0x{select_value:02X}")
+            value = int(self.card_lib.iic_read(vcom_addr, 0x00, 1)[0])
+            self.logger(f"Read VCOM_F I2C ({target.upper()}): addr=0x{vcom_addr:02X} reg=0x00 -> 0x{value:02X}")
+            return value
+        self.card_lib.iic_over_aux_write(vcom_addr, 0x02, [select_value])
+        self.logger(f"RTQ6749 VCOM_F AUX read source: slave=0x{vcom_addr:02X} reg=0x02 <- 0x{select_value:02X}")
+        value = int(self.card_lib.iic_over_aux_read(vcom_addr, 0x00, 1)[0])
+        self.logger(f"Read VCOM_F AUX ({target.upper()}): addr=0x{vcom_addr:02X} reg=0x00 -> 0x{value:02X}")
+        return value
+
+    def _write_rtq6749_vcom(self, value: int, target: str, vcom_addr: int) -> None:
+        select_value = 0x00 if target == "mtp" else 0x80
+        if self.config.tcon_key == "i2c":
+            self.card_lib.iic_write(vcom_addr, 0x02, bytes([select_value]))
+            self.logger(f"RTQ6749 VCOM_F I2C write source: slave=0x{vcom_addr:02X} reg=0x02 <- 0x{select_value:02X}")
+            self.card_lib.iic_write(vcom_addr, 0x00, bytes([value]))
+            self.logger(f"Write VCOM_F I2C ({target.upper()}): addr=0x{vcom_addr:02X} reg=0x00 <- 0x{value:02X}")
+            return
+        self.card_lib.iic_over_aux_write(vcom_addr, 0x02, [select_value])
+        self.logger(f"RTQ6749 VCOM_F AUX write source: slave=0x{vcom_addr:02X} reg=0x02 <- 0x{select_value:02X}")
+        self.card_lib.iic_over_aux_write(vcom_addr, 0x00, [value])
+        self.logger(f"Write VCOM_F AUX ({target.upper()}): addr=0x{vcom_addr:02X} reg=0x00 <- 0x{value:02X}")
 
     def _read_lx_vcom_via_pmic(self, target: str) -> int:
         slave = self.pmic_profile.slave_addr
@@ -299,13 +386,214 @@ class LocalAuxSession:
             self.logger("Disconnected")
 
 
-def _load_operate_module(module_path: Path):
-    spec = importlib.util.spec_from_file_location("pmic_aux_operate_card", module_path)
+def _load_jtool_module(module_path: Path):
+    spec = importlib.util.spec_from_file_location("pmic_aux_jtool", module_path)
     if spec is None or spec.loader is None:
-        raise AuxGuiError(f"Unable to load OperateCardLib module from {module_path}")
+        raise AuxGuiError(f"Unable to load jtoollib module from {module_path}")
     module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
+    old_cwd = Path.cwd()
+    try:
+        os.chdir(module_path.parent)
+        spec.loader.exec_module(module)
+    finally:
+        os.chdir(old_cwd)
     return module
+
+
+class DirectJtoolI2c:
+    def __init__(self, module, handle, logger: Callable[[str], None]) -> None:
+        self.module = module
+        self.handle = handle
+        self.logger = logger
+        self.closed = False
+
+    def iic_over_aux_write(self, addr: int, offset: int, data: list[int] | bytes) -> None:
+        self.module.i2c_write(self.handle, addr=addr, reg=offset, data=data)
+
+    def iic_over_aux_read(self, addr: int, offset: int, length: int) -> list[int]:
+        return list(self.module.i2c_read(self.handle, addr=addr, reg=offset, length=length))
+
+    def iic_write(self, addr: int, offset: int, data: list[int] | bytes) -> None:
+        actual_addr = addr << 1 if addr < 0x40 else addr
+        self.iic_over_aux_write(actual_addr, offset, data)
+
+    def iic_read(self, addr: int, offset: int, length: int) -> list[int]:
+        actual_addr = addr << 1 if addr < 0x40 else addr
+        return self.iic_over_aux_read(actual_addr, offset, length)
+
+    def iic_write_s(self, addr: int, value: int) -> None:
+        self.module.i2c_write_no_reg(self.handle, addr=addr, data=[value])
+
+    def iic_read_s(self, addr: int, length: int = 1) -> int | list[int]:
+        buf = (self.module.c_uint8 * length)()
+        err = self.module.jtool.I2CRead(
+            self.handle,
+            self.module.c_uint8(addr),
+            self.module.c_int(self.module.REGADDR_TYPE.REGADDR_NONE),
+            self.module.c_uint32(0),
+            self.module.c_uint16(length),
+            buf,
+        )
+        if err != 0:
+            raise RuntimeError(f"I2CRead failed, error code: {err}")
+        if length == 1:
+            return int(buf[0])
+        return [int(buf[i]) for i in range(length)]
+
+    def write_vcom(self, raw_value: int, vcom_addr: int = 0x9E) -> None:
+        self.iic_write_s(vcom_addr, raw_value)
+
+    def read_vcom(self, vcom_addr: int = 0x9E) -> int:
+        return int(self.iic_read_s(vcom_addr | 0x01))
+
+    def free_lib(self) -> None:
+        if self.closed:
+            return
+        try:
+            self.module.jtool.DevClose(self.handle)
+        finally:
+            self.closed = True
+
+
+class GpuAuxCard:
+    def __init__(self, port, tcon_key: str, backend: str, logger: Callable[[str], None]) -> None:
+        self.port = port
+        self.tcon_key = tcon_key
+        self.backend = backend.upper()
+        self.logger = logger
+        self.closed = False
+
+    def write_dpcd(self, addr: int, data: bytes) -> None:
+        payload = bytes(data)
+        if not payload:
+            raise ValueError("DPCD write payload cannot be empty")
+        self.port.write_dpcd(addr, payload)
+
+    def read_dpcd(self, addr: int, length: int) -> bytes:
+        return bytes(self.port.read_dpcd(addr, length))
+
+    def iic_over_aux_write(self, addr: int, offset: int, data: list[int] | bytes) -> None:
+        self._prepare_iic_over_aux(addr)
+        try:
+            self.iic_write(_write_addr_to_7bit(addr), offset, data)
+        finally:
+            self._finish_iic_over_aux()
+
+    def iic_over_aux_read(self, addr: int, offset: int, length: int) -> list[int]:
+        self._prepare_iic_over_aux(addr)
+        try:
+            return self.iic_read(_write_addr_to_7bit(addr), offset, length)
+        finally:
+            self._finish_iic_over_aux()
+
+    def iic_write(self, addr: int, offset: int, data: list[int] | bytes) -> None:
+        payload = bytes([offset & 0xFF]) + bytes(data)
+        self.port.i2c_write(_addr7_to_write_addr(addr), payload)
+
+    def iic_read(self, addr: int, offset: int, length: int) -> list[int]:
+        device = _addr7_to_write_addr(addr)
+        self.port.i2c_write(device, bytes([offset & 0xFF]))
+        return list(self.port.i2c_read(device, length))
+
+    def iic_write_s(self, addr: int, value: int) -> None:
+        self.port.i2c_write(_addr7_to_write_addr(addr), bytes([value & 0xFF]))
+
+    def iic_read_s(self, addr: int, length: int = 1) -> int | list[int]:
+        data = list(self.port.i2c_read(_addr7_to_write_addr(addr), length))
+        if length == 1:
+            return int(data[0])
+        return data
+
+    def write_vcom(self, raw_value: int, vcom_addr: int = 0x9E) -> None:
+        self._prepare_iic_over_aux(vcom_addr)
+        try:
+            self.iic_write_s(_write_addr_to_7bit(vcom_addr), raw_value)
+        finally:
+            self._finish_iic_over_aux()
+
+    def read_vcom(self, vcom_addr: int = 0x9E) -> int:
+        self._prepare_iic_over_aux(vcom_addr)
+        try:
+            return int(self.iic_read_s(_write_addr_to_7bit(vcom_addr)))
+        finally:
+            self._finish_iic_over_aux()
+
+    def free_lib(self) -> None:
+        if self.closed:
+            return
+        try:
+            self.port.close()
+        finally:
+            self.closed = True
+
+    def _prepare_iic_over_aux(self, slave_addr: int) -> None:
+        if self.tcon_key == "nova":
+            self.write_dpcd(0x00102, b"\xC0")
+            self.iic_write(0x60, 0x02, b"\x04\x00")
+        elif self.tcon_key == "anx":
+            self.write_dpcd(0x004F5, b"\x41\x56\x4F\x20\x16")
+            self.write_dpcd(0x004F0, b"\x0E\x00\x00\x00")
+            self.write_dpcd(0x004F3, b"\x01")
+            self.write_dpcd(0x004F0, b"\x0E\x00\x00\x30\x09")
+        elif self.tcon_key == "parade":
+            for value in b"PARADE-FW-DP\x00\x06\x03\x03":
+                self.write_dpcd(0x00480, bytes([value]))
+            self.read_dpcd(0x00480, 1)
+            self.write_dpcd(0x00482, b"\x80")
+            self.write_dpcd(0x0048B, b"\x90")
+            self.write_dpcd(0x0048E, bytes([slave_addr & 0xFF]))
+
+    def _finish_iic_over_aux(self) -> None:
+        if self.tcon_key == "parade":
+            self.write_dpcd(0x00480, b"\x00")
+            self.write_dpcd(0x00480, b"\x00")
+
+
+def _addr7_to_write_addr(addr: int) -> int:
+    if not 0 <= addr <= 0xFF:
+        raise ValueError(f"I2C address out of range: 0x{addr:X}")
+    if addr < 0x80:
+        return (addr << 1) & 0xFE
+    return addr & 0xFE
+
+
+def _write_addr_to_7bit(addr: int) -> int:
+    if not 0 <= addr <= 0xFF:
+        raise ValueError(f"I2C address out of range: 0x{addr:X}")
+    return (addr & 0xFE) >> 1
+
+
+def enumerate_gpu_aux_port_choices(gpu_key: str) -> list[GpuAuxPortChoice]:
+    if gpu_key == "i2c":
+        return []
+    if gpu_key not in GPU_AUX_TARGETS:
+        raise AuxGuiError(f"GPU backend {gpu_key} is not supported by gpu-aux")
+    try:
+        from gpu_aux import enumerate_gpus, enumerate_ports
+
+        backend, kind = GPU_AUX_TARGETS[gpu_key]
+        choices: list[GpuAuxPortChoice] = []
+        for gpu_index, _gpu in enumerate(enumerate_gpus(backend)):
+            matching_ports = [port for port in enumerate_ports(backend, gpu_index) if port.kind == kind]
+            for port_index, port in enumerate(matching_ports):
+                name = getattr(port, "name", "") or "Unknown display"
+                identity = getattr(port, "identity", f"{backend}:{gpu_index}:{port_index}")
+                label = f"GPU {gpu_index} {kind} {port_index}  {identity}  {name}"
+                choices.append(
+                    GpuAuxPortChoice(
+                        label=label,
+                        backend=backend,
+                        kind=kind,
+                        gpu_index=gpu_index,
+                        port_index=port_index,
+                        identity=identity,
+                    )
+                )
+        return choices
+    except AuxGuiError:
+        raise
+    except Exception as exc:
+        raise AuxGuiError(f"Display enumeration failed: {exc}") from exc
 
 
 def connect(config: SessionConfig, logger: Callable[[str], None]) -> "_WorkerBackedAuxSession":
@@ -314,8 +602,12 @@ def connect(config: SessionConfig, logger: Callable[[str], None]) -> "_WorkerBac
 
 
 def _connect_local(config: SessionConfig, logger: Callable[[str], None]) -> LocalAuxSession:
+    if config.gpu_key == "i2c":
+        return _connect_local_i2c(config, logger)
     if config.gpu_key not in GPU_CARD_IDS:
         raise AuxGuiError(f"Unknown GPU card id key: {config.gpu_key}")
+    if config.gpu_key not in GPU_AUX_TARGETS:
+        raise AuxGuiError(f"GPU backend {config.gpu_key} is not supported by gpu-aux")
     tcon_profile = TCON_PROFILES[config.tcon_key]
     base_pmic_profile = PMIC_PROFILES[config.pmic_key]
     pmic_profile = replace(
@@ -323,21 +615,20 @@ def _connect_local(config: SessionConfig, logger: Callable[[str], None]) -> Loca
         slave_addr=config.pmic_slave_addr,
         unlock_slave_addr=config.pmic_slave_addr if base_pmic_profile.unlock_before_access else base_pmic_profile.unlock_slave_addr,
     )
-    module = _load_operate_module(config.operate_module_path)
     try:
-        card_class = getattr(module, tcon_profile.adapter_class_name)
-        card_lib = card_class(str(config.dll_path))
-        card_id = GPU_CARD_IDS[config.gpu_key]
+        from gpu_aux import AuxPort
+
+        backend, kind = GPU_AUX_TARGETS[config.gpu_key]
         logger(
-            f"Connecting: GPU={config.gpu_key} CardID={card_id} "
+            f"Connecting via gpu-aux: GPU={config.gpu_key} backend={backend} port={kind} "
+            f"gpu_index={config.gpu_index} port_index={config.port_index} "
             f"TCON={tcon_profile.name} PMIC={pmic_profile.name} "
             f"PMIC_ADDR=0x{pmic_profile.slave_addr:02X} "
             f"NOVA_IIC_EN={config.nova_use_iic_en} NOVA_IIC_EN_SCHEME={config.nova_iic_en_scheme}"
         )
-        init_ok = bool(card_lib.init(card_id))
-        if not init_ok:
-            raise AuxGuiError(f"DLL init returned failure for CardID {card_id}")
-        logger("DLL init succeeded")
+        port = AuxPort(kind, index=config.port_index, gpu_index=config.gpu_index, backend=backend)
+        card_lib = GpuAuxCard(port, config.tcon_key, backend, logger)
+        logger(f"gpu-aux port opened: {port.identity}")
     except Exception as exc:
         raise AuxGuiError(f"Connection failed: {exc}") from exc
     return LocalAuxSession(
@@ -346,6 +637,44 @@ def _connect_local(config: SessionConfig, logger: Callable[[str], None]) -> Loca
         card_lib=card_lib,
         tcon_profile=tcon_profile,
         pmic_profile=pmic_profile,
+    )
+
+
+def _connect_local_i2c(config: SessionConfig, logger: Callable[[str], None]) -> LocalAuxSession:
+    default_jtool_dll_path, default_jtool_module_path = default_i2c_paths(Path(__file__).resolve().parents[1])
+    jtool_dll_path = config.jtool_dll_path or default_jtool_dll_path
+    jtool_module_path = config.jtool_module_path or default_jtool_module_path
+    if not jtool_dll_path.exists():
+        raise AuxGuiError(f"jtool.dll not found: {jtool_dll_path}")
+    if not jtool_module_path.exists():
+        raise AuxGuiError(f"jtoollib.py not found: {jtool_module_path}")
+    base_pmic_profile = PMIC_PROFILES[config.pmic_key]
+    pmic_profile = replace(
+        base_pmic_profile,
+        slave_addr=config.pmic_slave_addr,
+        unlock_slave_addr=config.pmic_slave_addr if base_pmic_profile.unlock_before_access else base_pmic_profile.unlock_slave_addr,
+    )
+    module = _load_jtool_module(jtool_module_path)
+    try:
+        devices = module.scan_devices_sn()
+        sn = devices[0] if devices else None
+        handle = module.open_device(sn) if sn else module.open_device(idx=0)
+        card_lib = DirectJtoolI2c(module, handle, logger)
+        logger(
+            f"Connecting direct I2C: SN={sn or 'default'} "
+            f"PMIC={pmic_profile.name} PMIC_ADDR=0x{pmic_profile.slave_addr:02X}"
+        )
+        logger("jtool I2C device opened")
+    except Exception as exc:
+        raise AuxGuiError(f"Connection failed: {exc}") from exc
+    direct_config = replace(config, tcon_key="i2c", nova_use_iic_en=False)
+    return LocalAuxSession(
+        config=direct_config,
+        logger=logger,
+        card_lib=card_lib,
+        tcon_profile=TCON_PROFILES["i2c"],
+        pmic_profile=pmic_profile,
+        init_summary="Direct I2C ready",
     )
 
 
@@ -360,13 +689,24 @@ def normalize_register_value(register, value: int) -> int:
     logic_mask = 0
     for option in getattr(register, "bit_options", ()):
         logic_mask |= option.bit_mask
+    explicit_mask = getattr(register, "value_mask", None)
+    explicit_numeric_mask = getattr(register, "numeric_mask", None)
     if not getattr(register, "supports_slider", True):
         numeric_mask = 0
+    elif explicit_numeric_mask is not None:
+        numeric_mask = explicit_numeric_mask
     elif logic_mask:
         numeric_mask = register.max_value & ~logic_mask
+    elif explicit_mask is not None:
+        numeric_mask = explicit_mask
     else:
         numeric_mask = register.max_value
-    allowed_mask = (logic_mask | numeric_mask) if logic_mask else register.max_value
+    if explicit_mask is not None:
+        allowed_mask = explicit_mask
+    elif logic_mask:
+        allowed_mask = logic_mask | numeric_mask
+    else:
+        allowed_mask = register.max_value
     normalized = value & allowed_mask
     return max(register.min_value, min(register.max_value, normalized))
 
@@ -388,9 +728,9 @@ def parse_hex_input(text: str) -> int:
         raise AuxGuiError(f"Invalid hex value: {text}") from exc
 
 
-def default_paths(base_dir: Path) -> tuple[Path, Path]:
-    pylib = base_dir / "circuit_project" / "pylib"
-    return pylib / "OperateCardLib.dll", pylib / "OperateCardLib.py"
+def default_i2c_paths(base_dir: Path) -> tuple[Path, Path]:
+    pylib = base_dir / "drivers" / "jtool"
+    return pylib / "jtool.dll", pylib / "jtoollib.py"
 
 
 def format_exception(exc: Exception) -> str:
@@ -400,6 +740,15 @@ def format_exception(exc: Exception) -> str:
 def format_register_display(profile: PmicProfile, register_key: str, value: int, current_values: dict[str, int] | None = None) -> str:
     register = _find_register(profile, register_key)
     current_values = current_values or {}
+
+    if profile.key == "b802" and register.address == 0x04:
+        freq_code = current_values.get("reg_03", 0x0C) & 0x0F
+        freq_values = (100, 150, 200, 250, 300, 400, 500, 600, 700, 800, 900, 1000, 1225, 1335, 1450, 1600)
+        fsw = freq_values[freq_code]
+        dac = (value >> 2) & 0x3F
+        low_freq = 16000 / ((16000 / fsw) + (8 * dac) + 7)
+        rates = ("0.5V/ns", "1V/ns", "2V/ns", "4V/ns")
+        return f"LX {rates[value & 0x03]} / PFM {low_freq:.2f}kHz"
 
     if profile.key in {"nvp2515", "b602"}:
         if register.address == 0x01:
@@ -489,6 +838,36 @@ def format_register_display(profile: PmicProfile, register_key: str, value: int,
             if navdd is not None:
                 return f"{-4.0 - 0.1 * (navdd & 0x1F) + 0.02 * (value & 0x3F):.2f}V"
 
+    if profile.key == "rtq6749":
+        if register.address == 0x00:
+            return f"{5.0 + 0.05 * min(value & 0x3F, 0x2E):.2f}V"
+        elif register.address == 0x01:
+            return f"{-5.0 - 0.05 * min(value & 0x3F, 0x2E):.2f}V"
+        elif register.address == 0x02:
+            return f"{min(7.0 + 0.5 * (value & 0x3F), 30.0):.2f}V"
+        elif register.address == 0x03:
+            return f"{-6.0 - 0.25 * min(value & 0x3F, 0x30):.2f}V"
+        elif register.address == 0x04:
+            return f"{-3.0 + 0.02 * min(value & 0xFF, 0xFA):.2f}V"
+        elif register.address == 0x05:
+            return f"{2.0 + 2.0 * (value & 0x03):.1f}V"
+        elif register.address == 0x06:
+            return ("600kHz", "800kHz", "1MHz", "2.2MHz")[value & 0x03]
+        elif register.address in {0x07, 0x09, 0x0B, 0x0D, 0x0F, 0x10}:
+            return f"{5 * (value & 0x0F)}ms"
+        elif register.address in {0x08, 0x0E}:
+            return f"{5 * ((value & 0x07) + 1)}ms"
+        elif register.address == 0x0A:
+            return f"{3 * ((value & 0x07) + 1)}ms"
+        elif register.address == 0x0C:
+            return f"{5 * ((value & 0x03) + 1)}ms"
+        elif register.address == 0x11:
+            return f"{3 * (value & 0x0F)}ms"
+        elif register.address in {0x18, 0x19, 0x1A, 0x1B}:
+            return f"{2 * (value & 0x07)}ms"
+        elif register.address == 0x1C:
+            return f"VCOM off {2 * (value & 0x07)}ms"
+
     if profile.key == "lx52042c":
         if register.address == 0x03:
             return f"{4.0 + 0.05 * (value & 0x3F):.2f}V"
@@ -555,6 +934,12 @@ def format_vcom_display(profile: PmicProfile, value: int, current_values: dict[s
         coarse_code = current_values.get("reg_0C", 0x4E)
         coarse_value = -2.56 + 0.02 * coarse_code
         return f"{coarse_value + 0.01 * (value - 0x40):.2f}V"
+    if profile.key == "rtq6749":
+        coarse_code = current_values.get("reg_04")
+        if coarse_code is None:
+            return "unknown vcom_c"
+        vcom_c = -3.0 + 0.02 * min(coarse_code & 0xFF, 0xFA)
+        return f"{vcom_c + 0.01 * (value - 0x7F):.2f}V"
     if profile.key == "lx52042c":
         min_code = current_values.get("reg_1D")
         if min_code is None:
@@ -575,10 +960,10 @@ def format_vcom_display(profile: PmicProfile, value: int, current_values: dict[s
 def _format_nt_vgh(value: int, mode_value: int = 0x00) -> str:
     code = value & 0x1F
     high_res = bool(mode_value & 0x80)
-    vgh_30 = bool(value & 0x04)
+    vgh_30 = bool(value & 0x20)
     if high_res:
         actual = min(12.5 + 0.5 * code, 28.0)
-        if vgh_30 and actual >= 28.0:
+        if vgh_30 and code == 0x1F:
             actual = 30.0
     else:
         actual = min(6.0 + 0.2 * code, 12.0)
@@ -757,11 +1142,11 @@ class _WorkerBackedAuxSession:
     def write_all_registers(self, values: dict[str, int], target: str = "dac", exclude_vcom: bool = True) -> None:
         self._call("write_all_registers", values=values, target=target, exclude_vcom=exclude_vcom)
 
-    def read_vcom(self, target: str = "dac") -> int:
-        return int(self._call("read_vcom", target=target))
+    def read_vcom(self, target: str = "dac", device_addr: int | None = None) -> int:
+        return int(self._call("read_vcom", target=target, device_addr=device_addr))
 
-    def write_vcom(self, value: int, target: str = "dac") -> None:
-        self._call("write_vcom", value=value, target=target)
+    def write_vcom(self, value: int, target: str = "dac", device_addr: int | None = None) -> None:
+        self._call("write_vcom", value=value, target=target, device_addr=device_addr)
 
     def run_mtp_commit(self) -> str:
         return str(self._call("run_mtp_commit"))
@@ -878,8 +1263,10 @@ def _encode_config(config: SessionConfig) -> str:
         "tcon_key": config.tcon_key,
         "pmic_key": config.pmic_key,
         "pmic_slave_addr": config.pmic_slave_addr,
-        "dll_path": str(config.dll_path),
-        "operate_module_path": str(config.operate_module_path),
+        "gpu_index": config.gpu_index,
+        "port_index": config.port_index,
+        "jtool_dll_path": str(config.jtool_dll_path) if config.jtool_dll_path is not None else "",
+        "jtool_module_path": str(config.jtool_module_path) if config.jtool_module_path is not None else "",
         "nova_use_iic_en": config.nova_use_iic_en,
         "nova_iic_en_scheme": config.nova_iic_en_scheme,
         "use_local_bundle_paths": bool(getattr(sys, "frozen", False)),
@@ -889,18 +1276,20 @@ def _encode_config(config: SessionConfig) -> str:
 
 def _decode_config(payload: str) -> SessionConfig:
     data = json.loads(base64.urlsafe_b64decode(payload.encode("ascii")).decode("utf-8"))
-    dll_path = Path(data["dll_path"])
-    operate_module_path = Path(data["operate_module_path"])
+    jtool_dll_path = Path(data["jtool_dll_path"]) if data.get("jtool_dll_path") else None
+    jtool_module_path = Path(data["jtool_module_path"]) if data.get("jtool_module_path") else None
     if data.get("use_local_bundle_paths"):
         bundle_base = Path(__file__).resolve().parents[1]
-        dll_path, operate_module_path = default_paths(bundle_base)
+        jtool_dll_path, jtool_module_path = default_i2c_paths(bundle_base)
     return SessionConfig(
         gpu_key=data["gpu_key"],
         tcon_key=data["tcon_key"],
         pmic_key=data["pmic_key"],
         pmic_slave_addr=int(data["pmic_slave_addr"]),
-        dll_path=dll_path,
-        operate_module_path=operate_module_path,
+        gpu_index=int(data.get("gpu_index", 0)),
+        port_index=int(data.get("port_index", 0)),
+        jtool_dll_path=jtool_dll_path,
+        jtool_module_path=jtool_module_path,
         nova_use_iic_en=bool(data.get("nova_use_iic_en", False)),
         nova_iic_en_scheme=str(data.get("nova_iic_en_scheme", "io1")),
     )
