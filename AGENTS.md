@@ -74,10 +74,11 @@ If runtime behavior depends on a new local asset, packaging must usually be upda
 ### PMIC
 - `nvp2515`
 - `nt50805`
+- `nt51950`
 - `rt6755`
 - `lx52042c`
 
-The codebase currently reflects all four PMICs above. Older notes that mention only three PMICs are outdated.
+The codebase currently reflects all five PMICs above. Older notes that mention fewer PMICs are outdated.
 
 ## Current Behavior Contracts
 
@@ -178,6 +179,17 @@ Notebook and upstream library behavior should guide compatibility decisions when
 - Current active PMIC slave address in code: `0x47`
 - Datasheet may show `0x46`; preserve current code behavior unless hardware evidence justifies a change
 - VCOM handling mirrors NVP2515 logic in the current GUI model
+
+### NT51950
+- I2C write address: `0xDE`
+- Direct I2C only; do not expose or route this profile through GPU AUX
+- Supported register scope is CMD1 page 0 (`0x10`), addresses `0x00..0x0B`, `0x0D`, and `0x0E`
+- Registers `0x00` and `0x01` are read-only
+- Access follows the unlock, reload-off, protection-disable, operation, and relock flow from the reference notebook and datasheet
+- VCOM remains in ordinary registers `0x02`/`0x03`; there is no separate VCOM panel
+- VCOM display combines `0x03[1:0]` and `0x02[7:0]` into a 10-bit code before applying the datasheet voltage table
+- Voltage interpretations for `0x02..0x0B`, `0x0D`, and `0x0E` live in `format_register_display()`; keep the `0x02`/`0x03` dependency bidirectional in `gui.py`
+- Online read/write only; MTP controls and MTP service targets are disabled
 
 ### RT6755
 - PMIC slave address: `0x47`

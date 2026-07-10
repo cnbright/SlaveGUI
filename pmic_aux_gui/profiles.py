@@ -64,6 +64,8 @@ class PmicProfile:
     registers: tuple[RegisterDefinition, ...]
     vcom: VcomDefinition
     supports_vcom: bool = True
+    supports_mtp: bool = True
+    direct_i2c_only: bool = False
     unlock_before_access: bool = False
     unlock_slave_addr: int | None = None
     unlock_register: int | None = None
@@ -157,6 +159,25 @@ def bitopt(
         enabled_label=enabled_label,
         disabled_label=disabled_label,
     )
+
+
+def fmt_nt51950_status(value: int) -> str:
+    rom_state = "High" if value & 0x80 else "Low"
+    return f"ROM test output: {rom_state} / Silicon version code: {value & 0x1F}"
+
+
+def fmt_nt51950_trim_flags(value: int) -> str:
+    vcom_count = {0x0: 0, 0x1: 1, 0x3: 2, 0x7: 3, 0xF: 4}.get((value >> 2) & 0x0F)
+    cmd1_count = {0x0: 0, 0x1: 1, 0x3: 2}.get(value & 0x03)
+
+    def describe(name: str, count: int | None) -> str:
+        if count is None:
+            return f"{name}: invalid flag"
+        if count == 0:
+            return f"{name}: not programmed"
+        return f"{name}: programmed {count}x"
+
+    return f"{describe('VCOM', vcom_count)} / {describe('CMD1', cmd1_count)}"
 
 
 def fmt_volt_linear(base: float, step: float, unit: str = "V", precision: int = 2) -> Callable[[int], str]:
@@ -357,6 +378,47 @@ def _step_nova_iic_en(hw: HardwareProxy, logger: Callable[[str], None], scheme_k
 
 
 PMIC_PROFILES: dict[str, PmicProfile] = {
+    "nt51950": PmicProfile(
+        key="nt51950",
+        name="NT51950",
+        slave_addr=0xDE,
+        registers=(
+            reg(
+                0x00,
+                "ROM_T_OUT / VERSION",
+                default_value=0x00,
+                description="Read-only ROM test output and VERSION[4:0] status",
+                writable=False,
+                supports_slider=False,
+                display_formatter=fmt_nt51950_status,
+            ),
+            reg(
+                0x01,
+                "TRIM Flags",
+                default_value=0x00,
+                description="Read-only TRIM_VCOM_FLAG[3:0] and TRIM_CMD1_FLAG[1:0] status",
+                writable=False,
+                supports_slider=False,
+                display_formatter=fmt_nt51950_trim_flags,
+            ),
+            reg(0x02, "VCOM[7:0]", default_value=0x02, description="Online VCOM low byte"),
+            reg(0x03, "VCOM[9:8]", max_value=0x03, default_value=0x01, description="Online VCOM high two bits"),
+            reg(0x04, "VGMAH_P[5:0]", max_value=0x3F, default_value=0x1D),
+            reg(0x05, "VGMAH_N[5:0]", max_value=0x3F, default_value=0x1D),
+            reg(0x06, "VGMAL_P[4:0]", max_value=0x1F, default_value=0x03),
+            reg(0x07, "VGMAL_N[4:0]", max_value=0x1F, default_value=0x03),
+            reg(0x08, "VGHO[7:0]", default_value=0x28),
+            reg(0x09, "VGLO[7:0]", default_value=0x36),
+            reg(0x0A, "VGH[7:0]", default_value=0x32),
+            reg(0x0B, "VGL[7:0]", default_value=0x32),
+            reg(0x0D, "AVDD_SEL[4:0]", max_value=0x1F, default_value=0x11),
+            reg(0x0E, "AVEE_SEL[4:0]", max_value=0x1F, default_value=0x11),
+        ),
+        vcom=VcomDefinition(name="Unsupported", min_value=0x00, max_value=0x00),
+        supports_vcom=False,
+        supports_mtp=False,
+        direct_i2c_only=True,
+    ),
     "b802": PmicProfile(
         key="b802",
         name="B802-1V LED Driver",

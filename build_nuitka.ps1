@@ -30,8 +30,8 @@ $Arguments = @(
     "--include-data-files=$ProjectRoot\drivers\jtool\jtool.dll=drivers/jtool/jtool.dll",
     "--company-name=Codex",
     "--product-name=PMIC AUX GUI",
-    "--file-version=1.0.0.0",
-    "--product-version=1.0.0.0",
+    "--file-version=1.1.0.0",
+    "--product-version=1.1.0.0",
     "$ProjectRoot\run_pmic_aux_gui.py"
 )
 

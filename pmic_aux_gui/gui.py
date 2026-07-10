@@ -50,6 +50,10 @@ class RegisterPageState:
 class PmicAuxGuiApp(ctk.CTk):
     REFRESH_DEBOUNCE_MS = 24
     DISPLAY_DEPENDENCIES = {
+        "nt51950": {
+            "reg_02": ("reg_03",),
+            "reg_03": ("reg_02",),
+        },
         "nvp2515": {
             "reg_01": ("reg_05",),
             "reg_03": ("reg_0C",),
@@ -237,29 +241,53 @@ class PmicAuxGuiApp(ctk.CTk):
         bottom.grid(row=2, column=0, sticky="ew", padx=12, pady=(0, 12))
         for index in range(5):
             bottom.grid_columnconfigure(index, weight=1)
-        ctk.CTkButton(bottom, text="Read All DAC", command=lambda: self._read_all_registers("dac")).grid(row=0, column=0, padx=8, pady=8, sticky="ew")
-        ctk.CTkButton(bottom, text="Write All DAC", command=lambda: self._write_all_registers("dac")).grid(row=0, column=1, padx=8, pady=8, sticky="ew")
-        ctk.CTkButton(bottom, text="Read All MTP", command=lambda: self._read_all_registers("mtp")).grid(row=0, column=2, padx=8, pady=8, sticky="ew")
-        ctk.CTkButton(bottom, text="Write All MTP", command=lambda: self._write_all_registers("mtp")).grid(row=0, column=3, padx=8, pady=8, sticky="ew")
+        self.read_all_dac_button = ctk.CTkButton(bottom, text="Read All DAC", command=lambda: self._read_all_registers("dac"))
+        self.read_all_dac_button.grid(row=0, column=0, padx=8, pady=8, sticky="ew")
+        self.write_all_dac_button = ctk.CTkButton(bottom, text="Write All DAC", command=lambda: self._write_all_registers("dac"))
+        self.write_all_dac_button.grid(row=0, column=1, padx=8, pady=8, sticky="ew")
+        self.read_all_mtp_button = ctk.CTkButton(bottom, text="Read All MTP", command=lambda: self._read_all_registers("mtp"))
+        self.read_all_mtp_button.grid(row=0, column=2, padx=8, pady=8, sticky="ew")
+        self.write_all_mtp_button = ctk.CTkButton(bottom, text="Write All MTP", command=lambda: self._write_all_registers("mtp"))
+        self.write_all_mtp_button.grid(row=0, column=3, padx=8, pady=8, sticky="ew")
         ctk.CTkButton(bottom, text="Clear Log", command=self._clear_log).grid(row=0, column=4, padx=8, pady=8, sticky="ew")
         self.vcom_var.trace_add("write", lambda *_args: self._refresh_vcom_display())
 
     def _reload_register_rows(self) -> None:
-        self._sync_i2c_mode()
         profile = PMIC_PROFILES[self.pmic_var.get()]
+        if profile.direct_i2c_only:
+            self.gpu_var.set("i2c")
+            self.gpu_menu.configure(state="disabled")
+        else:
+            self.gpu_menu.configure(state="normal")
+        self._sync_i2c_mode()
         if profile.supports_vcom:
             self.vcom_frame.grid()
             self.vcom_slider.configure(from_=profile.vcom.min_value, to=profile.vcom.max_value, number_of_steps=max(1, profile.vcom.max_value - profile.vcom.min_value))
         else:
             self.vcom_frame.grid_remove()
+        if profile.supports_mtp:
+            self.read_all_dac_button.configure(text="Read All DAC")
+            self.write_all_dac_button.configure(text="Write All DAC")
+            self.read_all_mtp_button.grid()
+            self.write_all_mtp_button.grid()
+        else:
+            self.read_all_dac_button.configure(text="Read All Online")
+            self.write_all_dac_button.configure(text="Write All Online")
+            self.read_all_mtp_button.grid_remove()
+            self.write_all_mtp_button.grid_remove()
         self._sync_vcom_split_visibility(profile)
         self._sync_vcom_title(profile)
         self._show_register_page(self.pmic_var.get())
         self._refresh_vcom_display()
 
     def _on_pmic_change(self, pmic_key: str) -> None:
+        if self.session is not None:
+            self._disconnect()
         self.pmic_var.set(pmic_key)
-        self.pmic_addr_var.set(f"{PMIC_PROFILES[pmic_key].slave_addr:02X}")
+        profile = PMIC_PROFILES[pmic_key]
+        self.pmic_addr_var.set(f"{profile.slave_addr:02X}")
+        if profile.direct_i2c_only:
+            self.gpu_var.set("i2c")
         self._reload_register_rows()
 
     def _create_register_page(self, pmic_key: str) -> RegisterPageState:
@@ -373,7 +401,7 @@ class PmicAuxGuiApp(ctk.CTk):
         display_text = format_register_display(profile, register.key, initial_value, {register.key: initial_value})
         if register.bit_options and not numeric_mask:
             display_text = ""
-        current_label = ctk.CTkLabel(row, text=display_text, width=110, anchor="e")
+        current_label = ctk.CTkLabel(row, text=display_text, width=280 if profile.key == "nt51950" else 110, anchor="e")
         current_label.grid(row=0, column=4, padx=6, pady=6, sticky="e")
         bit_option_vars: dict[str, tk.StringVar] = {}
         options_frame: ctk.CTkFrame | None = None
@@ -470,6 +498,9 @@ class PmicAuxGuiApp(ctk.CTk):
         self.log_box.delete("1.0", "end")
 
     def _on_gpu_change(self) -> None:
+        profile = PMIC_PROFILES[self.pmic_var.get()]
+        if profile.direct_i2c_only:
+            self.gpu_var.set("i2c")
         self._sync_i2c_mode()
         self._refresh_display_ports()
 
@@ -516,6 +547,9 @@ class PmicAuxGuiApp(ctk.CTk):
         return choice.gpu_index, choice.port_index
 
     def _current_config(self) -> SessionConfig:
+        profile = PMIC_PROFILES[self.pmic_var.get()]
+        if profile.direct_i2c_only and self.gpu_var.get() != "i2c":
+            raise AuxGuiError(f"{profile.name} supports Direct I2C only; AUX access is disabled")
         pmic_addr = parse_hex_input(f"0x{self.pmic_addr_var.get().strip()}")
         if not 0x00 <= pmic_addr <= 0xFF:
             raise AuxGuiError("PMIC address must be in range 0x00 to 0xFF")

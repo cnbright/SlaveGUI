@@ -113,8 +113,11 @@ class LocalAuxSession:
 
     def read_register(self, reg_key: str, target: str = "dac") -> int:
         register = _find_register(self.pmic_profile, reg_key)
+        self._ensure_target_supported(target)
         self.ensure_ready()
         self._ensure_pmic_unlock()
+        if self.pmic_profile.key == "nt51950":
+            return self._read_nt51950_register(register)
         self._prepare_register_read(register, target)
         if target == "mtp" and self.pmic_profile.mtp_read_mode == "fallback_to_dac":
             self.logger(f"MTP read for {register.name} falls back to DAC path")
@@ -131,10 +134,16 @@ class LocalAuxSession:
 
     def write_register(self, reg_key: str, value: int, target: str = "dac") -> None:
         register = _find_register(self.pmic_profile, reg_key)
+        self._ensure_target_supported(target)
+        if not register.writable:
+            raise AuxGuiError(f"{register.name} is read-only")
         value = normalize_register_value(register, value)
         validate_register_value(register.min_value, register.max_value, value)
         self.ensure_ready()
         self._ensure_pmic_unlock()
+        if self.pmic_profile.key == "nt51950":
+            self._write_nt51950_register(register, value)
+            return
         try:
             self.card_lib.iic_over_aux_write(self.pmic_profile.slave_addr, register.address, [value])
             self.logger(
@@ -147,6 +156,7 @@ class LocalAuxSession:
             raise AuxGuiError(f"Write register failed: {exc}") from exc
 
     def read_all_registers(self, target: str = "dac", exclude_vcom: bool = True) -> dict[str, int | str]:
+        self._ensure_target_supported(target)
         results: dict[str, int | str] = {}
         for register in self.pmic_profile.registers:
             if exclude_vcom and _is_bulk_excluded_vcom_register(self.pmic_profile, register):
@@ -163,6 +173,7 @@ class LocalAuxSession:
         return results
 
     def write_all_registers(self, values: dict[str, int], target: str = "dac", exclude_vcom: bool = True) -> None:
+        self._ensure_target_supported(target)
         write_target = "dac" if target == "mtp" else target
         wrote_any = False
         if target == "mtp":
@@ -303,6 +314,79 @@ class LocalAuxSession:
             f"reg=0x{register.address:02X} after source select delay=10ms"
         )
 
+    def _ensure_target_supported(self, target: str) -> None:
+        if target not in {"dac", "mtp"}:
+            raise AuxGuiError(f"Unsupported register target: {target}")
+        if target == "mtp" and not self.pmic_profile.supports_mtp:
+            raise AuxGuiError(f"{self.pmic_profile.name} supports online read/write only")
+
+    def _read_nt51950_register(self, register) -> int:
+        self._begin_nt51950_access()
+        try:
+            value = self._nt51950_read(0x10, register.address)
+            self.logger(
+                f"Read {register.name}: slave=0x{self.pmic_profile.slave_addr:02X} "
+                f"page=0x10 reg=0x{register.address:02X} -> 0x{value:02X}"
+            )
+            return value
+        except Exception as exc:
+            raise AuxGuiError(f"Read register failed: {exc}") from exc
+        finally:
+            self._end_nt51950_access()
+
+    def _write_nt51950_register(self, register, value: int) -> None:
+        self._begin_nt51950_access()
+        try:
+            self.card_lib.iic_over_aux_write(
+                self.pmic_profile.slave_addr,
+                0x10,
+                [register.address, value],
+            )
+            self.logger(
+                f"Write {register.name}: slave=0x{self.pmic_profile.slave_addr:02X} "
+                f"page=0x10 reg=0x{register.address:02X} <- 0x{value:02X}"
+            )
+        except Exception as exc:
+            raise AuxGuiError(f"Write register failed: {exc}") from exc
+        finally:
+            self._end_nt51950_access()
+
+    def _begin_nt51950_access(self) -> None:
+        slave = self.pmic_profile.slave_addr
+        try:
+            for _attempt in range(10):
+                self.card_lib.iic_over_aux_write(slave, 0xD0, [0x0D, 0x5A])
+                self.card_lib.iic_over_aux_write(slave, 0xD0, [0x0E, 0x28])
+                if self._nt51950_read(0xD0, 0x0F) == 0x01:
+                    break
+            else:
+                raise AuxGuiError("NT51950 unlock flag did not become 0x01 after 10 attempts")
+
+            self.card_lib.iic_over_aux_write(slave, 0x21, [0x09, 0xA5])
+            for page in (0x10, 0x11, 0x17, 0x20, 0x30, 0x40):
+                self.card_lib.iic_over_aux_write(slave, page, [0x1D, 0x03])
+            self.logger("NT51950 access unlocked, CMD1 reload disabled, register protection disabled")
+        except Exception:
+            self._end_nt51950_access()
+            raise
+
+    def _end_nt51950_access(self) -> None:
+        slave = self.pmic_profile.slave_addr
+        try:
+            self.card_lib.iic_over_aux_write(slave, 0xD0, [0x0D, 0x00])
+            self.card_lib.iic_over_aux_write(slave, 0xD0, [0x0E, 0x00])
+            self.logger("NT51950 access relocked")
+        except Exception as exc:
+            self.logger(f"NT51950 relock failed: {exc}")
+
+    def _nt51950_read(self, page: int, address: int) -> int:
+        raw = self.card_lib.iic_over_aux_write_then_read(
+            self.pmic_profile.slave_addr,
+            [page, address],
+            1,
+        )
+        return int(raw[0] if isinstance(raw, (list, tuple, bytes, bytearray)) else raw)
+
     def _read_rtq6749_vcom(self, target: str, vcom_addr: int) -> int:
         select_value = 0x00 if target == "mtp" else 0x80
         if self.config.tcon_key == "i2c":
@@ -413,6 +497,11 @@ class DirectJtoolI2c:
     def iic_over_aux_read(self, addr: int, offset: int, length: int) -> list[int]:
         return list(self.module.i2c_read(self.handle, addr=addr, reg=offset, length=length))
 
+    def iic_over_aux_write_then_read(self, addr: int, prefix: list[int] | bytes, length: int) -> list[int]:
+        self.module.i2c_write_no_reg(self.handle, addr=addr, data=list(prefix))
+        result = self.iic_read_s(addr, length)
+        return [int(result)] if length == 1 else list(result)
+
     def iic_write(self, addr: int, offset: int, data: list[int] | bytes) -> None:
         actual_addr = addr << 1 if addr < 0x40 else addr
         self.iic_over_aux_write(actual_addr, offset, data)
@@ -483,6 +572,15 @@ class GpuAuxCard:
         self._prepare_iic_over_aux(addr)
         try:
             return self.iic_read(_write_addr_to_7bit(addr), offset, length)
+        finally:
+            self._finish_iic_over_aux()
+
+    def iic_over_aux_write_then_read(self, addr: int, prefix: list[int] | bytes, length: int) -> list[int]:
+        self._prepare_iic_over_aux(addr)
+        try:
+            device = _addr7_to_write_addr(_write_addr_to_7bit(addr))
+            self.port.i2c_write(device, bytes(prefix))
+            return list(self.port.i2c_read(device, length))
         finally:
             self._finish_iic_over_aux()
 
@@ -602,6 +700,9 @@ def connect(config: SessionConfig, logger: Callable[[str], None]) -> "_WorkerBac
 
 
 def _connect_local(config: SessionConfig, logger: Callable[[str], None]) -> LocalAuxSession:
+    base_pmic_profile = PMIC_PROFILES[config.pmic_key]
+    if base_pmic_profile.direct_i2c_only and config.gpu_key != "i2c":
+        raise AuxGuiError(f"{base_pmic_profile.name} supports Direct I2C only; AUX access is disabled")
     if config.gpu_key == "i2c":
         return _connect_local_i2c(config, logger)
     if config.gpu_key not in GPU_CARD_IDS:
@@ -609,7 +710,6 @@ def _connect_local(config: SessionConfig, logger: Callable[[str], None]) -> Loca
     if config.gpu_key not in GPU_AUX_TARGETS:
         raise AuxGuiError(f"GPU backend {config.gpu_key} is not supported by gpu-aux")
     tcon_profile = TCON_PROFILES[config.tcon_key]
-    base_pmic_profile = PMIC_PROFILES[config.pmic_key]
     pmic_profile = replace(
         base_pmic_profile,
         slave_addr=config.pmic_slave_addr,
@@ -740,6 +840,11 @@ def format_exception(exc: Exception) -> str:
 def format_register_display(profile: PmicProfile, register_key: str, value: int, current_values: dict[str, int] | None = None) -> str:
     register = _find_register(profile, register_key)
     current_values = current_values or {}
+
+    if profile.key == "nt51950":
+        if register.address in {0x00, 0x01} and register.display_formatter is not None:
+            return register.display_formatter(value)
+        return _format_nt51950_register_voltage(register.address, value, current_values)
 
     if profile.key == "b802" and register.address == 0x04:
         freq_code = current_values.get("reg_03", 0x0C) & 0x0F
@@ -911,6 +1016,48 @@ def format_register_display(profile: PmicProfile, register_key: str, value: int,
             return "--"
     if register.bit_options:
         return "Enable" if any((value & opt.bit_mask) == opt.enabled_value for opt in register.bit_options) else "Disable"
+    return "--"
+
+
+def _format_nt51950_register_voltage(address: int, value: int, current_values: dict[str, int]) -> str:
+    if address in {0x00, 0x01}:
+        return "--"
+
+    if address in {0x02, 0x03}:
+        low = current_values.get("reg_02")
+        high = current_values.get("reg_03")
+        if low is None or high is None:
+            return "--"
+        code = ((high & 0x03) << 8) | (low & 0xFF)
+        if code > 0x2FF:
+            return f"Reserved / 0x{code:03X}"
+        voltage = min(1.0, 1.28 - 0.005 * code)
+        return f"{voltage:.3f}V / 0x{code:03X}"
+
+    code = value & 0xFF
+    if address == 0x04:
+        return "Reserved" if code > 0x3E else f"{4.75 + 0.05 * code:.2f}V"
+    if address == 0x05:
+        return "Reserved" if code > 0x3E else f"{-4.75 - 0.05 * code:.2f}V"
+    if address == 0x06:
+        return "Reserved" if not 0x03 <= code <= 0x1F else f"{0.05 * (code + 1):.2f}V"
+    if address == 0x07:
+        return "Reserved" if not 0x03 <= code <= 0x1F else f"{-0.05 * (code + 1):.2f}V"
+    if address == 0x08:
+        voltage = 7.0 + 0.05 * code
+        return "Reserved" if code & 0x03 not in {0x00, 0x02} or voltage > 19.0 else f"{voltage:.2f}V"
+    if address == 0x09:
+        voltage = -5.3 - 0.05 * code
+        return "Reserved" if code & 0x03 not in {0x00, 0x02} or not -18.0 <= voltage <= -6.5 else f"{voltage:.2f}V"
+    if address == 0x0A:
+        return "Reserved" if code > 0x8C else f"{8.0 + 0.1 * code:.2f}V"
+    if address == 0x0B:
+        voltage = -6.5 - 0.05 * code
+        return "Reserved" if code & 0x03 not in {0x00, 0x02} or voltage < -16.0 else f"{voltage:.2f}V"
+    if address == 0x0D:
+        return "Reserved" if not 0x07 <= code <= 0x1B else f"{5.3 + 0.1 * code:.2f}V"
+    if address == 0x0E:
+        return "Reserved" if not 0x07 <= code <= 0x1B else f"{-5.3 - 0.1 * code:.2f}V"
     return "--"
 
 
